@@ -107,9 +107,9 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 # Media Files Configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Create downloads directory if not exists
-os.makedirs(os.path.join(MEDIA_ROOT, 'downloads'), exist_ok=True)
+os.makedirs(os.path.joSTATICin(MEDIA_ROOT, 'downloads'), exist_ok=True)
 # Video Downloader Config
 VIDEODOWNLOADER_CONFIG = {
     'MAX_FILE_SIZE': 1024 * 1024 * 500,  # 500MB
