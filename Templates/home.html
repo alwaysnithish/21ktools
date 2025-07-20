@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  {% load static %}  <!-- Load static files -->
-    <link rel="icon" type="image/x-icon" href="{% static '21k.png' %}">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>21K Tools - Powerful Online Utility Tools </title>
+  <!-- SEO Title and Meta Description -->
+  <title>21K Tools – Free Online Video Downloader, File Converter & AI</title>
+  <meta name="description" content="Download HD videos from YouTube, Twitter & Instagram, convert files, resize images, and create AI content — all free with 21K Tools. No sign-up needed.">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
     * {
       margin: 0; 
@@ -487,8 +488,101 @@
         min-width: 150px; 
       }
     }
+    
+    .tools-description-container {
+    max-width: 1200px;
+    margin: 50px auto;
+    padding: 40px 30px;
+    background-color: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    font-family: 'Segoe UI', sans-serif;
+    color: #1a1a1a;
+    line-height: 1.8;
+    font-size: 1.05rem;
+    }
+    
+    .tools-description-container h2 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 30px;
+    color: #1e3a8a;
+    }
+    
+    .tools-description-container h3 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-top: 30px;
+    margin-bottom: 10px;
+    color: #2563eb;
+    }
+    
+    .tools-description-container p {
+    margin-bottom: 15px;
+    color: #333;
+    }
+    
+    .tools-description-container ul {
+    margin-left: 20px;
+    margin-bottom: 25px;
+    }
+    
+    .tools-description-container ul li {
+    margin-bottom: 8px;
+    list-style-type: disc;
+    }
+    
+    .tools-description-container a {
+    color: #2563eb;
+    text-decoration: none;
+    }
+    
+    .tools-description-container a:hover {
+    text-decoration: underline;
+    }
+    
+    /* Responsive styles */
+    @media (max-width: 768px) {
+    .tools-description-container {
+    padding: 25px 20px;
+    font-size: 1rem;
+    }
+    
+    .tools-description-container h2 {
+    font-size: 2rem;
+    }
+    
+    .tools-description-container h3 {
+    font-size: 1.3rem;
+    }
+    }
+    
+    @media (max-width: 480px) {
+    .tools-description-container {
+    padding: 20px 15px;
+    font-size: 0.95rem;
+    margin:15px 15px;
+    }
+    
+    .tools-description-container h2 {
+    font-size: 1.6rem;
+    }
+    
+    .tools-description-container h3 {
+    font-size: 1.2rem;
+    }
+    }
   </style>
 </head>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "21K Tools",
+  "url": "https://21k.tools/"
+}
+</script>
 <body>
 
 <header class="header">
@@ -503,7 +597,7 @@
     <div class="header-actions-container">
       <div class="search-box">
         <input type="text" class="search-input" placeholder="Search tools...">
-        <button class="search-btn">🔍</button>
+        <button class="search-btn"><i class="fas fa-search"></i></button>
       </div>
       <div class="mobileToggle" id="mobileToggle">
         <div class="bar1"></div>
@@ -514,24 +608,20 @@
     
     <nav class="header-nav">
       <div class="nav-menu">
-        <a href="https://21k.tools" class="nav-link">🏠 Home</a>
-        <a href="https://video.21k.tools" class="nav-link">🎥 Video Tools</a>
-        <a href="https://image.21k.tools" class="nav-link">🖼️ Image Tools</a>
-        <a href="https://pdf.21k.tools" class="nav-link">📄 PDF Tools</a>
-        <a href="https://audio.21k.tools" class="nav-link">🎵 Audio Tools</a>
-        <a href="https://text.21k.tools" class="nav-link">📝 Text Tools</a>
-        <a href="https://dev.21k.tools" class="nav-link">💻 Dev Tools</a>
+        <a href="https://21k.tools" class="nav-link"><i class="fas fa-home"></i> Home</a>
+        <a href="https://video.21k.tools" class="nav-link"><i class="fas fa-video"></i> Video Tools</a>
+        <a href="https://image.21k.tools" class="nav-link"><i class="fas fa-image"></i> Image Tools</a>
+        <a href="https://file.21k.tools" class="nav-link"><i class="fas fa-file"></i> File Tools</a>
+        <a href="https://ai.21k.tools" class="nav-link"><i class="fas fa-robot"></i> AI Tools</a>
       </div>
     </nav>
     
     <div class="mobile-panel" id="mobilePanel">
-      <a href="https://21k.tools" class="nav-link">🏠 Home</a>
-      <a href="https://video.21k.tools" class="nav-link">🎥 Video Tools</a>
-      <a href="https://image.21k.tools" class="nav-link">🖼️ Image Tools</a>
-      <a href="https://pdf.21k.tools" class="nav-link">📄 PDF Tools</a>
-      <a href="https://audio.21k.tools" class="nav-link">🎵 Audio Tools</a>
-      <a href="https://text.21k.tools" class="nav-link">📝 Text Tools</a>
-      <a href="https://dev.21k.tools" class="nav-link">💻 Dev Tools</a>
+      <a href="https://21k.tools" class="nav-link"><i class="fas fa-home"></i> Home</a>
+      <a href="https://video.21k.tools" class="nav-link"><i class="fas fa-video"></i> Video Tools</a>
+      <a href="https://image.21k.tools" class="nav-link"><i class="fas fa-image"></i> Image Tools</a>
+      <a href="https://file.21k.tools" class="nav-link"><i class="fas fa-file"></i> File Tools</a>
+      <a href="https://ai.21k.tools" class="nav-link"><i class="fas fa-robot"></i> AI Tools</a>
     </div>
   </div>
 </header>
@@ -548,68 +638,68 @@
   <p class="section-subtitle">Our most popular and powerful tools used by millions</p>
   </div>
   <div class="tools-grid">
-    <div class="tool-app" onclick="window.open('/download', '_blank')">
-      <div class="app-icon">📥</div>
-      <h3 class="app-title">Video Downloader</h3>
-      <p class="app-description">Download videos from YouTube, Instagram, TikTok, and 100+ platforms in high quality</p>
+    <div class="tool-app" onclick="window.open('https://twitter.21k.tools', '_blank')">
+      <div class="app-icon"><i class="fab fa-twitter"></i></div>
+      <h3 class="app-title">Twitter Video Downloader</h3>
+      <p class="app-description">Download videos from Twitter/X in HD quality with just one click</p>
       <div class="app-features">
-        <span class="feature-badge">4K Quality</span>
-        <span class="feature-badge">MP4/MP3</span>
+        <span class="feature-badge">HD Quality</span>
+        <span class="feature-badge">Fast</span>
+        <span class="feature-badge">No Watermark</span>
+      </div>
+      <button class="app-button">Launch Tool</button>
+    </div>
+    
+    <div class="tool-app" onclick="window.open('https://instagram.21k.tools', '_blank')">
+      <div class="app-icon"><i class="fab fa-instagram"></i></div>
+      <h3 class="app-title">Instagram Video Downloader</h3>
+      <p class="app-description">Download videos and reels from Instagram in high quality</p>
+      <div class="app-features">
+        <span class="feature-badge">Reels Support</span>
+        <span class="feature-badge">HD Qualit</span>
+        <span class="feature-badge">No Login</span>
+      </div>
+      <button class="app-button">Launch Tool</button>
+    </div>
+    
+    <div class="tool-app" onclick="window.open('https://youtube.21k.tools', '_blank')">
+      <div class="app-icon"><i class="fab fa-youtube"></i></div>
+      <h3 class="app-title">YouTube Video Downloader</h3>
+      <p class="app-description">Download YouTube videos in multiple formats and resolutions</p>
+      <div class="app-features">
+        <span class="feature-badge">4K Support</span>
+        <span class="feature-badge">MP3 Extract</span>
+        <span class="feature-badge">Playlists</span>
+      </div>
+      <button class="app-button">Launch Tool</button>
+    </div>
+    
+    <div class="tool-app" onclick="window.open('https://fileconverter.21k.tools', '_blank')">
+      <div class="app-icon"><i class="fas fa-file"></i></div>
+      <h3 class="app-title">File Converter</h3>
+      <p class="app-description">Convert between all popular file formats with ease</p>
+      <div class="app-features">
+        <span class="feature-badge">100+ Formats</span>
+        <span class="feature-badge">Batch Process</span>
         <span class="feature-badge">Fast</span>
       </div>
       <button class="app-button">Launch Tool</button>
     </div>
     
-    <div class="tool-app" onclick="window.open('', '_blank')">
-      <div class="app-icon">🎭</div>
-      <h3 class="app-title">Background Remover</h3>
-      <p class="app-description">Remove backgrounds from images instantly using advanced AI technology</p>
-      <div class="app-features">
-        <span class="feature-badge">AI Powered</span>
-        <span class="feature-badge">Instant</span>
-        <span class="feature-badge">HD Quality</span>
-      </div>
-      <button class="app-button">Coming Soon</button>
-    </div>
-    
-    <div class="tool-app" onclick="window.open('/', '_blank')">
-      <div class="app-icon">📋</div>
-      <h3 class="app-title">PDF Merger</h3>
-      <p class="app-description">Combine multiple PDF files into one document with drag & drop simplicity</p>
-      <div class="app-features">
-        <span class="feature-badge">Drag & Drop</span>
-        <span class="feature-badge">Secure</span>
-        <span class="feature-badge">No Limits</span>
-      </div>
-      <button class="app-button">Coming Soon</button>
-    </div>
-    
-    <div class="tool-app" onclick="window.open('/', '_blank')">
-      <div class="app-icon">📏</div>
+    <div class="tool-app" onclick="window.open('https://imageresizer.21k.tools', '_blank')">
+      <div class="app-icon"><i class="fas fa-image"></i></div>
       <h3 class="app-title">Image Resizer</h3>
-      <p class="app-description">Resize, compress, and optimize images while maintaining perfect quality</p>
+      <p class="app-description">Resize, compress, and optimize images while maintaining quality</p>
       <div class="app-features">
-        <span class="feature-badge">Batch Process</span>
+        <span class="feature-badge">Bulk Process</span>
         <span class="feature-badge">Smart Crop</span>
         <span class="feature-badge">All Formats</span>
       </div>
-      <button class="app-button">Coming Soon</button>
+      <button class="app-button">Launch Tool</button>
     </div>
     
-    <div class="tool-app" onclick="window.open('/', '_blank')">
-      <div class="app-icon">🔄</div>
-      <h3 class="app-title">Video Converter</h3>
-      <p class="app-description">Convert videos between all popular formats with lightning-fast speed</p>
-      <div class="app-features">
-        <span class="feature-badge">50+ Formats</span>
-        <span class="feature-badge">GPU Accelerated</span>
-        <span class="feature-badge">Quality</span>
-      </div>
-      <button class="app-button">Coming Soon</button>
-    </div>
-    
-    <div class="tool-app" onclick="window.open('/', '_blank')">
-      <div class="app-icon">🤖</div>
+    <div class="tool-app" onclick="window.open('https://ai.21k.tools', '_blank')">
+      <div class="app-icon"><i class="fas fa-robot"></i></div>
       <h3 class="app-title">AI Content Generator</h3>
       <p class="app-description">Generate high-quality content, articles, and copy using advanced AI</p>
       <div class="app-features">
@@ -617,10 +707,90 @@
         <span class="feature-badge">Multi-language</span>
         <span class="feature-badge">SEO Ready</span>
       </div>
-      <button class="app-button">Coming Soon</button>
+      <button class="app-button">Launch Tool</button>
     </div>
   </div>
 </main>
+<section class="tools-description-container">
+  <h2>Best Free Online Tools by 21K – Download, Convert, Resize & More</h2>
+
+  <p>
+    <strong>21K Tools</strong> is your all-in-one platform offering a wide range of web-based utilities designed to simplify your digital life. From downloading high-quality videos to converting files and generating AI-powered content, our tools are crafted for speed, security, and ease of use.
+  </p>
+
+  <h3>1. Twitter Video Downloader</h3>
+  <p>
+    Download any video from Twitter/X in high definition with our <strong>free Twitter video downloader</strong>. Perfect for saving viral clips, educational content, or news updates.
+  </p>
+  <ul>
+    <li>Supports MP4 and HD formats</li>
+    <li>Fast, one-click downloading</li>
+    <li>Safe and watermark-free</li>
+  </ul>
+
+  <h3>2. Instagram Video Downloader</h3>
+  <p>
+    Save Instagram Reels, stories, and posts instantly using our <strong>Instagram downloader tool</strong>. It’s secure, fast, and requires no login.
+  </p>
+  <ul>
+    <li>Supports Reels, Stories, and Videos</li>
+    <li>Full HD downloads</li>
+    <li>No login required</li>
+  </ul>
+
+  <h3>3. YouTube Video Downloader (4K + MP3)</h3>
+  <p>
+    Download YouTube videos in ultra HD and convert them to audio using our <strong>YouTube downloader and MP3 converter</strong>. Ideal for offline use and content archiving.
+  </p>
+  <ul>
+    <li>Download in 4K, Full HD, or MP3 formats</li>
+    <li>Extract high-quality audio</li>
+    <li>Download full playlists</li>
+  </ul>
+
+  <h3>4. Universal File Converter</h3>
+  <p>
+    Our <strong>free file converter tool</strong> handles over 100+ formats and supports batch processing for fast results.
+  </p>
+  <ul>
+    <li>Converts PDFs, DOCs, JPGs, MP4s, and more</li>
+    <li>Batch file conversion supported</li>
+    <li>Fast and reliable</li>
+  </ul>
+
+  <h3>5. Online Image Resizer & Optimizer</h3>
+  <p>
+    Compress, resize, and optimize your images without losing quality. Great for blogs, websites, and e-commerce use.
+  </p>
+  <ul>
+    <li>Supports all image formats</li>
+    <li>Bulk processing</li>
+    <li>Smart crop & maintain aspect ratio</li>
+  </ul>
+
+  <h3>6. AI Content Generator Powered by GPT</h3>
+  <p>
+    Create articles, SEO-friendly content, and ad copy with our <strong>AI writing tool</strong>. Backed by GPT-4 technology.
+  </p>
+  <ul>
+    <li>Multi-language support</li>
+    <li>SEO-ready text generation</li>
+    <li>Fast and creative content output</li>
+  </ul>
+
+  <h3>Why Choose 21K Tools?</h3>
+  <ul>
+    <li><strong>Free to use</strong> with no hidden charges</li>
+    <li><strong>Browser-based</strong> – works on all devices</li>
+    <li><strong>Secure and private</strong> – no data collection</li>
+    <li><strong>High performance</strong> tools, optimized for speed</li>
+    <li><strong>All-in-one platform</strong> for multiple utilities</li>
+  </ul>
+
+  <p>
+    Bookmark <a href="https://21k.tools" target="_blank">21K.Tools</a> today and simplify your online tasks with smart, free tools built for everyone.
+  </p>
+</section>
 
 <footer class="footer">
   <div class="footer-container">
@@ -628,62 +798,51 @@
       <div class="footer-section">
         <h3>Popular Tools</h3>
         <ul class="footer-links">
-          <li><a href="https://video.21k.tools/downloader">Video Downloader</a></li>
-          <li><a href="https://image.21k.tools/resize">Image Resizer</a></li>
-          <li><a href="https://pdf.21k.tools/merge">PDF Merger</a></li>
-          <li><a href="https://audio.21k.tools/converter">Audio Converter</a></li>
+          <li><a href="https://twitter.21k.tools"><i class="fab fa-twitter"></i> Twitter Video Downloader</a></li>
+          <li><a href="https://instagram.21k.tools"><i class="fab fa-instagram"></i> Instagram Video Downloader</a></li>
+          <li><a href="https://youtube.21k.tools"><i class="fab fa-youtube"></i> YouTube Video Downloader</a></li>
+          <li><a href="https://imageresizer.21k.tools"><i class="fas fa-image"></i> Image Resizer</a></li>
+          <li><a href="https://fileconverter.21k.tools"><i class="fas fa-file"></i> File Converter</a></li>
+          <li><a href="https://ai.21k.tools"><i class="fas fa-robot"></i> Chat with AI </a></li>
+          
         </ul>
       </div>
       <div class="footer-section">
         <h3>Categories</h3>
         <ul class="footer-links">
-          <li><a href="https://video.21k.tools">Video Tools</a></li>
-          <li><a href="https://image.21k.tools">Image Tools</a></li>
-          <li><a href="https://pdf.21k.tools">PDF Tools</a></li>
-          <li><a href="https://audio.21k.tools">Audio Tools</a></li>
-          <li><a href="https://text.21k.tools">Text Tools</a></li>
-          <li><a href="https://dev.21k.tools">Developer Tools</a></li>
+          <li><a href="https://video.21k.tools"><i class="fas fa-video"></i> Video Tools</a></li>
+          <li><a href="https://image.21k.tools"><i class="fas fa-image"></i> Image Tools</a></li>
+          <li><a href="https://file.21k.tools"><i class="fas fa-file"></i> File Tools</a></li>
+          <li><a href="https://ai.21k.tools"><i class="fas fa-robot"></i> AI Tools</a></li>
         </ul>
       </div>
       <div class="footer-section">
         <h3>Support</h3>
         <ul class="footer-links">
-          <li><a href="/help">Help Center</a></li>
-          <li><a href="/contact">Contact Us</a></li>
-          <li><a href="/api">API Documentation</a></li>
-          <li><a href="/status">Server Status</a></li>
-        </ul>
+          <li><a href="/help"><i class="fas fa-question-circle"></i> Help Center</a></li>
+          <li><a href="/contact"><i class="fas fa-envelope"></i> Contact Us</a></li>
+          </ul>
       </div>
       <div class="footer-section">
         <h3>Company</h3>
         <ul class="footer-links">
-          <li><a href="/about">About Us</a></li>
-          <li><a href="/privacy">Privacy Policy</a></li>
-          <li><a href="/terms">Terms of Service</a></li>
-          <li><a href="/blog">Blog</a></li>
+          <li><a href="/about"><i class="fas fa-info-circle"></i> About Us</a></li>
+          <li><a href="/privacypolicy"><i class="fas fa-shield-alt"></i> Privacy Policy</a></li>
+          <li><a href="/termsandconditions"><i class="fas fa-file-contract"></i> Terms and Conditions</a></li>
+          <li><a href="/blog"><i class="fas fa-blog"></i> Blog</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <div class="footer-brand">
         <div class="footer-brand-icon">21K</div>
-        <span></span>&copy; 2025 21K Tools. All rights reserved.</span>
+        <span>&copy; 2025 21K Tools. All rights reserved.</span>
       </div>
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <div class="social-links">
-  <a href="#" class="social-link" title="Twitter/X">
-    <i class="fab fa-twitter" aria-hidden="true"></i>
-  </a>
-  <a href="#" class="social-link" title="YouTube">
-    <i class="fab fa-youtube" aria-hidden="true"></i>
-  </a>
-  <a href="#" class="social-link" title="LinkedIn">
-    <i class="fab fa-facebook" aria-hidden="true"></i>
-  </a>
-  <a href="#" class="social-link" title="Instagram">
-    <i class="fab fa-instagram" aria-hidden="true"></i>
-  </a>
+      <div class="social-links">
+        <a href="https://x.com/@21ktools" class="social-link" title="Twitter"><i class="fab fa-twitter"></i></a>
+        <a href="https://instagram.com/@21k.tools" class="social-link" title="Instagram"><i class="fab fa-instagram"></i></a>
+        <a href="https://youtube.com/@21ktools" class="social-link" title="YouTube"><i class="fab fa-youtube"></i></a>
+        <a href="#" class="social-link" title="Facebook"><i class="fab fa-facebook"></i></a>
       </div>
     </div>
   </div>
