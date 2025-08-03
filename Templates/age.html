@@ -1731,10 +1731,12 @@
 
         function getBirthSeason(date) {
             const month = date.getMonth() + 1;
-            if (month >= 3 && month <= 5) return "Spring";
-            if (month >= 6 && month <= 8) return "Summer";
-            if (month >= 9 && month <= 11) return "Autumn";
-            return "Winter";
+            if (month >= 12 && month <= 2) return "Winter";
+            if (month >= 3 && month <= 5) return "Summer";
+            if (month >= 6 && month <= 9) return "Monsoon/Rainy";
+            if (month >= 10 && month <= 11) return "Autumn";
+            
+            return "Unknown";
         }
 
         function displayResults(ageData) {
