@@ -17,4 +17,6 @@ def about(request):
 def blog(request):
     return render(request, 'blog.html')
 
+def age(request):
+    return render(request, 'age.html')
 
