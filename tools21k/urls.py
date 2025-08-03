@@ -19,6 +19,7 @@ from django.views.static import serve
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('blog/',views.blog,name='blog'),
+    path('agecalculator/',views.age,name='age'),
     path('about/',views.about,name='about'),
     path('help/',views.help,name='help'),
     path('privacypolicy/',views.privacypolicy,name='privacypolicy'),
