@@ -9,7 +9,7 @@
 
 <url>
   <loc>https://21k.tools/</loc>
-  <lastmod>2025-08-03T06:49:54+00:00</lastmod>
+  <lastmod>2025-08-12T06:49:54+00:00</lastmod>
   <priority>1.00</priority>
 </url>
 <url>
@@ -38,7 +38,12 @@
   <priority>0.80</priority>
 </url>
 
-
+<url>
+ <loc>https://21k.tools/timecalculator/</loc>
+  <lastmod>2025-08-12T06:49:54+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
 
 </urlset>
+
 
