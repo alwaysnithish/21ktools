@@ -20,3 +20,6 @@ def blog(request):
 def age(request):
     return render(request, 'age.html')
 
+def time(request):
+    return render(request, 'time.html')
+    
