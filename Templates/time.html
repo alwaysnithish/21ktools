@@ -846,7 +846,10 @@
     <p style="color: #34495e; line-height: 1.6; margin-bottom: 15px; margin-left: 20px;">3. Choose the "to" unit.</p>
     
     <p style="color: #34495e; line-height: 1.6; margin-bottom: 15px;">The calculator instantly gives you the converted value with precision up to six decimal places.</p>
-    <img src="{% static 'timecalculator.png' %}" alt="Time Calculator">
+    {% load static %}
+<img src="{% static 'timecalculator.png' %}" 
+     alt="Time Calculator" 
+     style="max-width:100%; height:auto; margin:20px;">
     <h4 style="color: #e74c3c; font-size: 16px; margin: 15px 0 5px 0;">Example Uses:</h4>
     <p style="color: #34495e; line-height: 1.6; margin-bottom: 5px; margin-left: 20px;">• Converting hours into seconds for coding or data input.</p>
     <p style="color: #34495e; line-height: 1.6; margin-bottom: 5px; margin-left: 20px;">• Changing days into hours for better scheduling.</p>
