@@ -18,6 +18,7 @@ from django.views.static import serve
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('pagenotfound/',views.custom_page_not_found,name="custom_page_not_found"),
     path('blog/',views.blog,name='blog'),
     path('agecalculator/',views.age,name='age'),
     path('about/',views.about,name='about'),
