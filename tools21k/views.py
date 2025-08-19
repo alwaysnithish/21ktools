@@ -25,9 +25,6 @@ def time(request):
 def interest(request):
     return render(request, 'interest.html')
 
-    
-from django.shortcuts import render
-
 def custom_page_not_found(request, exception):
     return render(request, '404.html', status=404)
 
