@@ -18,7 +18,7 @@ from django.views.static import serve
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('pagenotfound/',views.custom_page_not_found,name="custom_page_not_found"),
+  #  path('pagenotfound/',views.custom_page_not_found,name="custom_page_not_found"),
     path('blog/',views.blog,name='blog'),
     path('agecalculator/',views.age,name='age'),
     path('about/',views.about,name='about'),
@@ -38,3 +38,10 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+from django.shortcuts import render
+
+def custom_page_not_found(request, exception):
+    return render(request, '404.html', status=404)
+
+handler404 = custom_page_not_found
