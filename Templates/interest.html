@@ -572,7 +572,13 @@
         .share-card-button {padding:10px 15px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:5px;}
         .share-card-button.download {background:var(--primary-color);color:white;border:none;}
         .share-card-button.close {background:#f1f1f1;border:1px solid #ddd;}
-        @media (max-width:768px) {
+        @media (max-width: 768px) {
+  .calculator-container {
+    margin: 20px 15px; /* Adds 15px margin on left and right */
+    width: calc(100% - 30px); /* Ensures full width minus margins */
+    max-width: 100%; /* Prevents overflow */
+  }
+        
             .calculator-box {grid-template-columns:1fr;}
             .calculate-button {grid-column:span 1;}
             .calculator-tabs {overflow-x:auto;flex-wrap:nowrap;padding-bottom:10px;}
