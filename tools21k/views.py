@@ -24,4 +24,6 @@ def time(request):
     return render(request, 'time.html')
 def interest(request):
     return render(request, 'interest.html')
+def unit(request):
+    return render(request, 'unit.html')
 
