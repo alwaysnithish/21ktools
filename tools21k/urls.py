@@ -27,7 +27,8 @@ urlpatterns = [
     path('termsandconditions/',views.termsandconditions,name='termsandconditions'),
     path('',views.home,name='home'),
     path('timecalculator/',views.time,name='time'),
-    path('interestcalculator/',views.interest,name='interest'),
+    path('unitconverterr/',views.unit,name='unit'),
+    path('interestcalculator/'views.interest,name='interest'),
     #path('download/', include('videodownloader.urls')),  # Include app URLs at root
     path('convert/',include('fileconverter.urls')),
     re_path(r'^sitemap\.xml$', serve, {'document_root': settings.STATIC_ROOT, 'path': 'sitemap.xml'}),
