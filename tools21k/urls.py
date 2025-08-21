@@ -27,7 +27,7 @@ urlpatterns = [
     path('termsandconditions/',views.termsandconditions,name='termsandconditions'),
     path('',views.home,name='home'),
     path('timecalculator/',views.time,name='time'),
-    path('unitconverterr/',views.unit,name='unit'),
+    path('unitconverter/',views.unit,name='unit'),
     path('interestcalculator/',views.interest,name='interest'),
     #path('download/', include('videodownloader.urls')),  # Include app URLs at root
     path('convert/',include('fileconverter.urls')),
