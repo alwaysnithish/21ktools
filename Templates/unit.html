@@ -1482,12 +1482,28 @@
       margin: 15px 0;
       border-left: 4px solid var(--accent-color);
     }
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin: 20px 0;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
 
-    .conversion-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
+.conversion-table {
+    width: 100%;
+    min-width: 500px; /* Minimum width before scrolling kicks in */
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+/* For the comparison table as well */
+.comparison-table {
+    width: 100%;
+    min-width: 500px;
+    border-collapse: collapse;
+    margin: 25px 0;
     }
+    
 
     .conversion-table th, .conversion-table td {
       border: 1px solid #ddd;
@@ -1520,11 +1536,7 @@
       color: #0d47a1;
     }
 
-    .comparison-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 25px 0;
-    }
+  
     
     .comparison-table th, .comparison-table td {
       border: 1px solid #ddd;
@@ -1762,7 +1774,7 @@
 
     <h3 class="subsection-title">The Metric System (SI Units)</h3>
     <p>Used by most countries worldwide, the metric system is based on powers of 10, making conversions straightforward. The International System of Units (SI) defines seven base units from which all other units are derived:</p>
-    
+    <div class="table-container">
     <table class="conversion-table">
       <tr>
         <th>Quantity</th>
@@ -1805,7 +1817,7 @@
         <td>cd</td>
       </tr>
     </table>
-    
+    </div>
     <p>The metric system uses standard prefixes to denote multiples and submultiples of units:</p>
     
     <div class="formula">
@@ -1839,7 +1851,7 @@
     <div class="feature-card">
       <h3><i class="fas fa-ruler"></i> Length Conversions</h3>
       <p>Our tool handles all common length measurements with precision. Length is one of the most frequently converted quantities, especially in construction, engineering, and international travel.</p>
-      
+      <div class="table-container">
       <table class="conversion-table">
         <tr>
           <th>Unit</th>
@@ -1887,7 +1899,7 @@
           <td>Road distances (US/UK)</td>
         </tr>
       </table>
-      
+      </div>
       <div class="conversion-example">
         <h4>Real-World Example: Converting Blueprint Measurements</h4>
         <p>An architect receives plans with dimensions in feet and inches but needs to convert them to meters for international contractors. A wall measuring 15' 8" would be converted as follows:</p>
@@ -2002,7 +2014,7 @@
         <td>Scientific applications</td>
       </tr>
     </table>
-    
+  </div>
     <div class="conversion-example">
       <h4>Real-World Example: Oven Temperature Conversion</h4>
       <p>When using a recipe from a European cookbook that calls for baking at 180°C, American cooks need to convert this to Fahrenheit:</p>
