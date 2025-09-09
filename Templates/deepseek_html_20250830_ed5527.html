@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal PDF Tools</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .upload-section {
+            text-align: center;
+            padding: 40px 20px;
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #4CAF50;
+            background: #f0fff4;
+            transform: scale(1.02);
+        }
+
+        .upload-section input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .file-info {
+            display: none;
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+
+        .tool-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .tool-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+
+        .tool-card p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .modal-header h2 {
+            color: #667eea;
+            margin: 0;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .progress {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .result-section {
+            display: none;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .error {
+            background: #ffe6e6;
+            color: #d32f2f;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #d32f2f;
+        }
+
+        .success {
+            background: #e8f5e8;
+            color: #2e7d2e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .download-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .download-link {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .download-link:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .page-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .page-checkbox {
+            display: flex;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .page-checkbox:hover {
+            background: #e9ecef;
+        }
+
+        .page-checkbox input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .page-checkbox.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .metadata-table th,
+        .metadata-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .metadata-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .tools-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                margin: 2% auto;
+                width: 95%;
+            }
+        }
+
+        .batch-section {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        .batch-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .file-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .range-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .range-input input {
+            width: 80px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Universal PDF Tools</h1>
+            <p>Powerful PDF processing tools for all your needs</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Upload Section -->
+            <div class="upload-section" id="uploadSection">
+                <h2>Upload Your PDF</h2>
+                <p>Click to select or drag and drop your PDF file here</p>
+                <input type="file" id="pdfUpload" accept=".pdf" multiple>
+                <label for="pdfUpload" class="upload-btn">Choose PDF Files</label>
+            </div>
+
+            <!-- File Info -->
+            <div class="file-info" id="fileInfo">
+                <h3>File Information</h3>
+                <div id="fileDetails"></div>
+            </div>
+
+            <!-- Tools Grid -->
+            <div class="tools-grid" id="toolsGrid">
+                <div class="tool-card disabled" data-tool="extract-text">
+                    <h3>📝 Extract Text</h3>
+                    <p>Extract all text content from your PDF with multiple extraction methods including OCR</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="extract-images">
+                    <h3>🖼️ Extract Images</h3>
+                    <p>Extract all images from your PDF and download them individually</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="split-pdf">
+                    <h3>✂️ Split PDF</h3>
+                    <p>Split your PDF into individual pages or custom page ranges</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="merge-pdfs">
+                    <h3>📚 Merge PDFs</h3>
+                    <p>Combine multiple PDF files into a single document</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="compress-pdf">
+                    <h3>🗜️ Compress PDF</h3>
+                    <p>Reduce file size while maintaining quality</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="convert-to-images">
+                    <h3>🎨 Convert to Images</h3>
+                    <p>Convert PDF pages to PNG, JPEG, or other image formats</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="add-watermark">
+                    <h3>🏷️ Add Watermark</h3>
+                    <p>Add text or image watermarks to protect your document</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="add-password">
+                    <h3>🔒 Add Password</h3>
+                    <p>Protect your PDF with password encryption</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="remove-password">
+                    <h3>🔓 Remove Password</h3>
+                    <p>Remove password protection from encrypted PDFs</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="rotate-pages">
+                    <h3>🔄 Rotate Pages</h3>
+                    <p>Rotate pages by 90, 180, or 270 degrees</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="delete-pages">
+                    <h3>🗑️ Delete Pages</h3>
+                    <p>Remove specific pages from your PDF</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="extract-pages">
+                    <h3>📄 Extract Pages</h3>
+                    <p>Extract specific pages into a new PDF document</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="rearrange-pages">
+                    <h3>🔀 Rearrange Pages</h3>
+                    <p>Change the order of pages in your PDF</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="pdf-to-word">
+                    <h3>📄 PDF to Word</h3>
+                    <p>Convert PDF content to Microsoft Word format</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="images-to-pdf">
+                    <h3>📸 Images to PDF</h3>
+                    <p>Convert multiple images into a single PDF document</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="html-to-pdf">
+                    <h3>🌐 HTML to PDF</h3>
+                    <p>Convert HTML content to PDF format</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="get-metadata">
+                    <h3>📊 View Metadata</h3>
+                    <p>View detailed information about your PDF file</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="optimize-pdf">
+                    <h3>⚡ Optimize PDF</h3>
+                    <p>Optimize PDF for web or print viewing</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="batch-process">
+                    <h3>🔄 Batch Process</h3>
+                    <p>Process multiple PDFs with the same operation</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="toolModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Tool</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div id="modalBody">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>Processing your PDF...</p>
+            </div>
+            <div class="result-section" id="resultSection">
+                <!-- Results will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentFiles = [];
+        let uploadedPDF = null;
+
+        // DOM elements
+        const uploadSection = document.getElementById('uploadSection');
+        const pdfUpload = document.getElementById('pdfUpload');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileDetails = document.getElementById('fileDetails');
+        const toolsGrid = document.getElementById('toolsGrid');
+        const modal = document.getElementById('toolModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const closeModal = document.querySelector('.close');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const resultSection = document.getElementById('resultSection');
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // File upload
+            pdfUpload.addEventListener('change', handleFileUpload);
+            uploadSection.addEventListener('click', () => pdfUpload.click());
+            
+            // Drag and drop
+            uploadSection.addEventListener('dragover', handleDragOver);
+            uploadSection.addEventListener('dragleave', handleDragLeave);
+            uploadSection.addEventListener('drop', handleDrop);
+            
+            // Tool cards
+            toolsGrid.addEventListener('click', handleToolClick);
+            
+            // Modal
+            closeModal.addEventListener('click', closeModalHandler);
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) closeModalHandler();
+            });
+        }
+
+        // File handling functions
+        function handleFileUpload(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                if (files.length === 1 && files[0].type === 'application/pdf') {
+                    uploadSinglePDF(files[0]);
+                } else {
+                    currentFiles = files.filter(f => f.type === 'application/pdf');
+                    showMultipleFileInfo();
+                }
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            uploadSection.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            uploadSection.classList.remove('dragover');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            uploadSection.classList.remove('dragover');
+            
+            const files = Array.from(event.dataTransfer.files);
+            const pdfFiles = files.filter(file => file.type === 'application/pdf');
+            
+            if (pdfFiles.length > 0) {
+                if (pdfFiles.length === 1) {
+                    uploadSinglePDF(pdfFiles[0]);
+                } else {
+                    currentFiles = pdfFiles;
+                    showMultipleFileInfo();
+                }
+            } else {
+                showError('Please upload valid PDF files only.');
+            }
+        }
+
+        async function uploadSinglePDF(file) {
+            const formData = new FormData();
+            formData.append('pdf_file', file);
+            
+            try {
+                showLoading(true);
+                const response = await fetch('/pdf-tools/upload/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    uploadedPDF = file;
+                    showFileInfo(result);
+                    enableTools();
+                } else {
+                    showError(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                showError('Upload failed: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showFileInfo(result) {
+            const info = result.info;
+            fileDetails.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div><strong>Filename:</strong> ${result.filename}</div>
+                    <div><strong>Pages:</strong> ${info.pages}</div>
+                    <div><strong>Title:</strong> ${info.title}</div>
+                    <div><strong>Author:</strong> ${info.author}</div>
+                    <div><strong>Creator:</strong> ${info.creator}</div>
+                    <div><strong>Subject:</strong> ${info.subject}</div>
+                </div>
+            `;
+            fileInfo.style.display = 'block';
+        }
+
+        function showMultipleFileInfo() {
+            fileDetails.innerHTML = `
+                <div><strong>Selected Files:</strong> ${currentFiles.length} PDF files</div>
+                <div class="file-list">
+                    ${currentFiles.map(file => `<div class="file-item">${file.name} (${formatFileSize(file.size)})</div>`).join('')}
+                </div>
+            `;
+            fileInfo.style.display = 'block';
+            enableBatchTools();
+        }
+
+        function enableTools() {
+            const toolCards = document.querySelectorAll('.tool-card.disabled');
+            toolCards.forEach(card => {
+                card.classList.remove('disabled');
+            });
+        }
+
+        function enableBatchTools() {
+            const batchCard = document.querySelector('[data-tool="batch-process"]');
+            const mergeCard = document.querySelector('[data-tool="merge-pdfs"]');
+            if (batchCard) batchCard.classList.remove('disabled');
+            if (mergeCard) mergeCard.classList.remove('disabled');
+        }
+
+        // Tool handling
+        function handleToolClick(event) {
+            const toolCard = event.target.closest('.tool-card');
+            if (!toolCard || toolCard.classList.contains('disabled')) return;
+            
+            const tool = toolCard.dataset.tool;
+            openToolModal(tool);
+        }
+
+        function openToolModal(tool) {
+            modalTitle.textContent = getToolTitle(tool);
+            modalBody.innerHTML = getToolContent(tool);
+            resultSection.style.display = 'none';
+            modal.style.display = 'block';
+            
+            // Setup tool-specific event listeners
+            setupToolEventListeners(tool);
+        }
+
+        function getToolTitle(tool) {
+            const titles = {
+                'extract-text': 'Extract Text from PDF',
+                'extract-images': 'Extract Images from PDF',
+                'split-pdf': 'Split PDF',
+                'merge-pdfs': 'Merge PDF Files',
+                'compress-pdf': 'Compress PDF',
+                'convert-to-images': 'Convert PDF to Images',
+                'add-watermark': 'Add Watermark',
+                'add-password': 'Add Password Protection',
+                'remove-password': 'Remove Password Protection',
+                'rotate-pages': 'Rotate Pages',
+                'delete-pages': 'Delete Pages',
+                'extract-pages': 'Extract Pages',
+                'rearrange-pages': 'Rearrange Pages',
+                'pdf-to-word': 'Convert PDF to Word',
+                'images-to-pdf': 'Convert Images to PDF',
+                'html-to-pdf': 'Convert HTML to PDF',
+                'get-metadata': 'View PDF Metadata',
+                'optimize-pdf': 'Optimize PDF',
+                'batch-process': 'Batch Process PDFs'
+            };
+            return titles[tool] || 'PDF Tool';
+        }
+
+        function getToolContent(tool) {
+            switch (tool) {
+                case 'extract-text':
+                    return `
+                        <p>Extract all text content from your PDF using multiple extraction methods.</p>
+                        <button class="btn-primary" onclick="extractText()">Extract Text</button>
+                    `;
+                
+                case 'extract-images':
+                    return `
+                        <p>Extract all images from your PDF document.</p>
+                        <button class="btn-primary" onclick="extractImages()">Extract Images</button>
+                    `;
+                
+                case 'split-pdf':
+                    return `
+                        <div class="form-group">
+                            <label>Split Type:</label>
+                            <select id="splitType">
+                                <option value="pages">Individual Pages</option>
+                                <option value="ranges">Page Ranges</option>
+                            </select>
+                        </div>
+                        <div id="rangeInputs" style="display: none;">
+                            <div class="form-group">
+                                <label>Page Ranges (one per line):</label>
+                                <textarea id="pageRanges" placeholder="Example:&#10;1-5&#10;10-15&#10;20-25" rows="4"></textarea>
+                            </div>
+                        </div>
+                        <button class="btn-primary" onclick="splitPDF()">Split PDF</button>
+                    `;
+                
+                case 'merge-pdfs':
+                    return `
+                        <div class="form-group">
+                            <label>Select PDF files to merge:</label>
+                            <input type="file" id="mergeFiles" accept=".pdf" multiple>
+                        </div>
+                        <button class="btn-primary" onclick="mergePDFs()">Merge PDFs</button>
+                    `;
+                
+                case 'compress-pdf':
+                    return `
+                        <p>Reduce your PDF file size while maintaining quality.</p>
+                        <button class="btn-primary" onclick="compressPDF()">Compress PDF</button>
+                    `;
+                
+                case 'convert-to-images':
+                    return `
+                        <div class="form-group">
+                            <label>Image Format:</label>
+                            <select id="imageFormat">
+                                <option value="PNG">PNG</option>
+                                <option value="JPEG">JPEG</option>
+                                <option value="GIF">GIF</option>
+                                <option value="BMP">BMP</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>DPI (Resolution):</label>
+                            <select id="imageDPI">
+                                <option value="150">150 DPI</option>
+                                <option value="200" selected>200 DPI</option>
+                                <option value="300">300 DPI</option>
+                                <option value="600">600 DPI</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" onclick="convertToImages()">Convert to Images</button>
+                    `;
+                
+                case 'add-watermark':
+                    return `
+                        <div class="form-group">
+                            <label>Watermark Text:</label>
+                            <input type="text" id="watermarkText" placeholder="Enter watermark text" value="WATERMARK">
+                        </div>
+                        <div class="form-group">
+                            <label>Position:</label>
+                            <select id="watermarkPosition">
+                                <option value="center">Center</option>
+                                <option value="top-left">Top Left</option>
+                                <option value="top-right">Top Right</option>
+                                <option value="bottom-left">Bottom Left</option>
+                                <option value="bottom-right">Bottom Right</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Opacity:</label>
+                            <input type="range" id="watermarkOpacity" min="0.1" max="1" step="0.1" value="0.3">
+                            <span id="opacityValue">0.3</span>
+                        </div>
+                        <button class="btn-primary" onclick="addWatermark()">Add Watermark</button>
+                    `;
+                
+                case 'add-password':
+                    return `
+                        <div class="form-group">
+                            <label>Password:</label>
+                            <input type="password" id="pdfPassword" placeholder="Enter password">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm Password:</label>
+                            <input type="password" id="confirmPassword" placeholder="Confirm password">
+                        </div>
+                        <button class="btn-primary" onclick="addPassword()">Add Password Protection</button>
+                    `;
+                
+                case 'remove-password':
+                    return `
+                        <div class="form-group">
+                            <label>Upload Password-Protected PDF:</label>
+                            <input type="file" id="protectedPDF" accept=".pdf">
+                        </div>
+                        <div class="form-group">
+                            <label>Current Password:</label>
+                            <input type="password" id="currentPassword" placeholder="Enter current password">
+                        </div>
+                        <button class="btn-primary" onclick="removePassword()">Remove Password</button>
+                    `;
+                
+                case 'rotate-pages':
+                    return `
+                        <div class="form-group">
+                            <label>Rotation Angle:</label>
+                            <select id="rotationAngle">
+                                <option value="90">90° Clockwise</option>
+                                <option value="180">180°</option>
+                                <option value="270">270° Clockwise</option>
+                                <option value="-90">90° Counter-clockwise</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Pages to Rotate:</label>
+                            <select id="rotatePageSelection">
+                                <option value="all">All Pages</option>
+                                <option value="specific">Specific Pages</option>
+                            </select>
+                        </div>
+                        <div id="specificPagesRotate" style="display: none;">
+                            <input type="text" id="rotatePageNumbers" placeholder="Page numbers (e.g., 1,3,5-8)">
+                        </div>
+                        <button class="btn-primary" onclick="rotatePages()">Rotate Pages</button>
+                    `;
+                
+                case 'delete-pages':
+                    return `
+                        <div class="form-group">
+                            <label>Pages to Delete:</label>
+                            <input type="text" id="deletePageNumbers" placeholder="Page numbers (e.g., 1,3,5-8)">
+                        </div>
+                        <p class="error">Warning: This action cannot be undone. Make sure you have a backup of your original file.</p>
+                        <button class="btn-primary" onclick="deletePages()">Delete Pages</button>
+                    `;
+                
+                case 'extract-pages':
+                    return `
+                        <div class="form-group">
+                            <label>Pages to Extract:</label>
+                            <input type="text" id="extractPageNumbers" placeholder="Page numbers (e.g., 1,3,5-8)">
+                        </div>
+                        <button class="btn-primary" onclick="extractPages()">Extract Pages</button>
+                    `;
+                
+                case 'rearrange-pages':
+                    return `
+                        <div class="form-group">
+                            <label>New Page Order:</label>
+                            <input type="text" id="newPageOrder" placeholder="Enter new order (e.g., 3,1,4,2)">
+                            <small>Specify the new order of pages. For example: 3,1,4,2 will make page 3 first, page 1 second, etc.</small>
+                        </div>
+                        <button class="btn-primary" onclick="rearrangePages()">Rearrange Pages</button>
+                    `;
+                
+                case 'pdf-to-word':
+                    return `
+                        <p>Convert your PDF to Microsoft Word format (.docx). Text and basic formatting will be preserved.</p>
+                        <button class="btn-primary" onclick="pdfToWord()">Convert to Word</button>
+                    `;
+                
+                case 'images-to-pdf':
+                    return `
+                        <div class="form-group">
+                            <label>Select Images:</label>
+                            <input type="file" id="imageFiles" accept="image/*" multiple>
+                        </div>
+                        <div id="imagePreview" class="file-list" style="display: none;"></div>
+                        <button class="btn-primary" onclick="imagesToPDF()">Convert to PDF</button>
+                    `;
+                
+                case 'html-to-pdf':
+                    return `
+                        <div class="form-group">
+                            <label>HTML Content:</label>
+                            <textarea id="htmlContent" rows="10" placeholder="Paste your HTML content here..."></textarea>
+                        </div>
+                        <button class="btn-primary" onclick="htmlToPDF()">Convert to PDF</button>
+                    `;
+                
+                case 'get-metadata':
+                    return `
+                        <p>View detailed information about your PDF file.</p>
+                        <button class="btn-primary" onclick="getMetadata()">View Metadata</button>
+                    `;
+                
+                case 'optimize-pdf':
+                    return `
+                        <div class="form-group">
+                            <label>Optimization Type:</label>
+                            <select id="optimizationType">
+                                <option value="web">Web (Smaller file size)</option>
+                                <option value="print">Print (Better quality)</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" onclick="optimizePDF()">Optimize PDF</button>
+                    `;
+                
+                case 'batch-process':
+                    return `
+                        <div class="batch-section">
+                            <h3>Batch Processing</h3>
+                            <div class="form-group">
+                                <label>Select Operation:</label>
+                                <select id="batchOperation">
+                                    <option value="extract_text">Extract Text</option>
+                                    <option value="compress">Compress</option>
+                                    <option value="convert_to_images">Convert to Images</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Select PDF Files:</label>
+                                <input type="file" id="batchFiles" accept=".pdf" multiple>
+                            </div>
+                            <div id="batchFileList" class="file-list" style="display: none;"></div>
+                            <button class="btn-primary" onclick="batchProcess()">Start Batch Processing</button>
+                        </div>
+                    `;
+                
+                default:
+                    return '<p>Tool not implemented yet.</p>';
+            }
+        }
+
+        function setupToolEventListeners(tool) {
+            switch (tool) {
+                case 'split-pdf':
+                    const splitType = document.getElementById('splitType');
+                    if (splitType) {
+                        splitType.addEventListener('change', function() {
+                            const rangeInputs = document.getElementById('rangeInputs');
+                            rangeInputs.style.display = this.value === 'ranges' ? 'block' : 'none';
+                        });
+                    }
+                    break;
+                
+                case 'add-watermark':
+                    const opacitySlider = document.getElementById('watermarkOpacity');
+                    const opacityValue = document.getElementById('opacityValue');
+                    if (opacitySlider && opacityValue) {
+                        opacitySlider.addEventListener('input', function() {
+                            opacityValue.textContent = this.value;
+                        });
+                    }
+                    break;
+                
+                case 'rotate-pages':
+                    const rotateSelection = document.getElementById('rotatePageSelection');
+                    if (rotateSelection) {
+                        rotateSelection.addEventListener('change', function() {
+                            const specificDiv = document.getElementById('specificPagesRotate');
+                            specificDiv.style.display = this.value === 'specific' ? 'block' : 'none';
+                        });
+                    }
+                    break;
+                
+                case 'images-to-pdf':
+                    const imageFiles = document.getElementById('imageFiles');
+                    const imagePreview = document.getElementById('imagePreview');
+                    if (imageFiles && imagePreview) {
+                        imageFiles.addEventListener('change', function() {
+                            const files = Array.from(this.files);
+                            if (files.length > 0) {
+                                imagePreview.innerHTML = files.map(file => 
+                                    `<div class="file-item">${file.name} (${formatFileSize(file.size)})</div>`
+                                ).join('');
+                                imagePreview.style.display = 'block';
+                            }
+                        });
+                    }
+                    break;
+                
+                case 'batch-process':
+                    const batchFiles = document.getElementById('batchFiles');
+                    const batchFileList = document.getElementById('batchFileList');
+                    if (batchFiles && batchFileList) {
+                        batchFiles.addEventListener('change', function() {
+                            const files = Array.from(this.files);
+                            if (files.length > 0) {
+                                batchFileList.innerHTML = files.map(file => 
+                                    `<div class="file-item">${file.name} (${formatFileSize(file.size)})</div>`
+                                ).join('');
+                                batchFileList.style.display = 'block';
+                            }
+                        });
+                    }
+                    break;
+            }
+        }
+
+        // Tool functions
+        async function extractText() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const response = await fetch('/pdf-tools/extract-text/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error extracting text: ' + error.message);
+            }
+        }
+
+        async function extractImages() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const response = await fetch('/pdf-tools/extract-images/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error extracting images: ' + error.message);
+            }
+        }
+
+        async function splitPDF() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const splitType = document.getElementById('splitType').value;
+                formData.append('split_type', splitType);
+                
+                if (splitType === 'ranges') {
+                    const ranges = document.getElementById('pageRanges').value;
+                    formData.append('page_ranges', ranges);
+                }
+                
+                const response = await fetch('/pdf-tools/split-pdf/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error splitting PDF: ' + error.message);
+            }
+        }
+
+        async function mergePDFs() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                
+                // Add the main uploaded file
+                if (uploadedPDF) {
+                    formData.append('pdf_files', uploadedPDF);
+                }
+                
+                // Add additional files
+                const mergeFiles = document.getElementById('mergeFiles').files;
+                for (let i = 0; i < mergeFiles.length; i++) {
+                    formData.append('pdf_files', mergeFiles[i]);
+                }
+                
+                const response = await fetch('/pdf-tools/merge-pdfs/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error merging PDFs: ' + error.message);
+            }
+        }
+
+        async function compressPDF() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const response = await fetch('/pdf-tools/compress-pdf/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error compressing PDF: ' + error.message);
+            }
+        }
+
+        async function convertToImages() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const format = document.getElementById('imageFormat').value;
+                const dpi = document.getElementById('imageDPI').value;
+                
+                formData.append('format', format);
+                formData.append('dpi', dpi);
+                
+                const response = await fetch('/pdf-tools/convert-to-images/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error converting to images: ' + error.message);
+            }
+        }
+
+        async function addWatermark() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const text = document.getElementById('watermarkText').value;
+                const position = document.getElementById('watermarkPosition').value;
+                const opacity = document.getElementById('watermarkOpacity').value;
+                
+                formData.append('text', text);
+                formData.append('position', position);
+                formData.append('opacity', opacity);
+                
+                const response = await fetch('/pdf-tools/add-watermark/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error adding watermark: ' + error.message);
+            }
+        }
+
+        async function addPassword() {
+            try {
+                const password = document.getElementById('pdfPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                
+                if (!password) {
+                    showError('Please enter a password');
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    showError('Passwords do not match');
+                    return;
+                }
+                
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                formData.append('password', password);
+                
+                const response = await fetch('/pdf-tools/add-password/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error adding password: ' + error.message);
+            }
+        }
+
+        async function removePassword() {
+            try {
+                const fileInput = document.getElementById('protectedPDF');
+                const password = document.getElementById('currentPassword').value;
+                
+                if (!fileInput.files.length) {
+                    showError('Please select a password-protected PDF file');
+                    return;
+                }
+                
+                if (!password) {
+                    showError('Please enter the current password');
+                    return;
+                }
+                
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', fileInput.files[0]);
+                formData.append('password', password);
+                
+                const response = await fetch('/pdf-tools/remove-password/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error removing password: ' + error.message);
+            }
+        }
+
+        async function rotatePages() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const angle = document.getElementById('rotationAngle').value;
+                const selection = document.getElementById('rotatePageSelection').value;
+                
+                formData.append('angle', angle);
+                
+                if (selection === 'specific') {
+                    const pages = document.getElementById('rotatePageNumbers').value;
+                    formData.append('pages', pages);
+                }
+                
+                const response = await fetch('/pdf-tools/rotate-pages/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error rotating pages: ' + error.message);
+            }
+        }
+
+        async function deletePages() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const pages = document.getElementById('deletePageNumbers').value;
+                formData.append('pages', pages);
+                
+                const response = await fetch('/pdf-tools/delete-pages/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error deleting pages: ' + error.message);
+            }
+        }
+
+        async function extractPages() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const pages = document.getElementById('extractPageNumbers').value;
+                formData.append('pages', pages);
+                
+                const response = await fetch('/pdf-tools/extract-pages/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error extracting pages: ' + error.message);
+            }
+        }
+
+        async function rearrangePages() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const order = document.getElementById('newPageOrder').value;
+                formData.append('order', order);
+                
+                const response = await fetch('/pdf-tools/rearrange-pages/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error rearranging pages: ' + error.message);
+            }
+        }
+
+        async function pdfToWord() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const response = await fetch('/pdf-tools/pdf-to-word/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error converting to Word: ' + error.message);
+            }
+        }
+
+        async function imagesToPDF() {
+            try {
+                const imageFiles = document.getElementById('imageFiles').files;
+                
+                if (!imageFiles.length) {
+                    showError('Please select at least one image file');
+                    return;
+                }
+                
+                showProcessing();
+                const formData = new FormData();
+                
+                for (let i = 0; i < imageFiles.length; i++) {
+                    formData.append('image_files', imageFiles[i]);
+                }
+                
+                const response = await fetch('/pdf-tools/images-to-pdf/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error converting images to PDF: ' + error.message);
+            }
+        }
+
+        async function htmlToPDF() {
+            try {
+                const htmlContent = document.getElementById('htmlContent').value;
+                
+                if (!htmlContent) {
+                    showError('Please enter HTML content');
+                    return;
+                }
+                
+                showProcessing();
+                const formData = new FormData();
+                formData.append('html_content', htmlContent);
+                
+                const response = await fetch('/pdf-tools/html-to-pdf/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error converting HTML to PDF: ' + error.message);
+            }
+        }
+
+        async function getMetadata() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const response = await fetch('/pdf-tools/get-metadata/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error getting metadata: ' + error.message);
+            }
+        }
+
+        async function optimizePDF() {
+            try {
+                showProcessing();
+                const formData = new FormData();
+                formData.append('pdf_file', uploadedPDF);
+                
+                const optimizationType = document.getElementById('optimizationType').value;
+                formData.append('optimization_type', optimizationType);
+                
+                const response = await fetch('/pdf-tools/optimize-pdf/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error optimizing PDF: ' + error.message);
+            }
+        }
+
+        async function batchProcess() {
+            try {
+                const operation = document.getElementById('batchOperation').value;
+                const batchFiles = document.getElementById('batchFiles').files;
+                
+                if (!batchFiles.length) {
+                    showError('Please select at least one PDF file');
+                    return;
+                }
+                
+                showProcessing();
+                const formData = new FormData();
+                formData.append('operation', operation);
+                
+                for (let i = 0; i < batchFiles.length; i++) {
+                    formData.append('pdf_files', batchFiles[i]);
+                }
+                
+                const response = await fetch('/pdf-tools/batch-process/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
+                
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                showError('Error in batch processing: ' + error.message);
+            }
+        }
+
+        // Utility functions
+        function getCSRFToken() {
+            const name = 'csrftoken';
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showProcessing() {
+            loadingIndicator.style.display = 'block';
+            resultSection.style.display = 'none';
+        }
+
+        function showResult(result) {
+            loadingIndicator.style.display = 'none';
+            resultSection.style.display = 'block';
+            
+            if (result.success) {
+                let html = '<div class="success">Operation completed successfully!</div>';
+                
+                if (result.download_url) {
+                    html += `
+                        <div class="download-links">
+                            <a href="${result.download_url}" class="download-link" download>Download Result</a>
+                        </div>
+                    `;
+                }
+                
+                if (result.text) {
+                    html += `
+                        <div style="margin-top: 20px;">
+                            <h3>Extracted Text:</h3>
+                            <textarea style="width: 100%; height: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">${result.text}</textarea>
+                        </div>
+                    `;
+                }
+                
+                if (result.images && result.images.length > 0) {
+                    html += `
+                        <div style="margin-top: 20px;">
+                            <h3>Extracted Images:</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+                                ${result.images.map(img => `
+                                    <div style="text-align: center;">
+                                        <img src="${img.url}" style="max-width: 100%; height: auto; border: 1px solid #ddd;">
+                                        <a href="${img.url}" class="download-link" download>Download</a>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (result.files && result.files.length > 0) {
+                    html += `
+                        <div style="margin-top: 20px;">
+                            <h3>Generated Files:</h3>
+                            <div class="download-links">
+                                ${result.files.map(file => `
+                                    <a href="${file.url}" class="download-link" download>${file.name}</a>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (result.metadata) {
+                    html += `
+                        <div style="margin-top: 20px;">
+                            <h3>PDF Metadata:</h3>
+                            <table class="metadata-table">
+                                ${Object.entries(result.metadata).map(([key, value]) => `
+                                    <tr>
+                                        <th>${key}</th>
+                                        <td>${value || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </table>
+                        </div>
+                    `;
+                }
+                
+                resultSection.innerHTML = html;
+            } else {
+                showError(result.error || 'An unknown error occurred');
+            }
+        }
+
+        function showError(message) {
+            loadingIndicator.style.display = 'none';
+            resultSection.style.display = 'block';
+            resultSection.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function showLoading(show) {
+            if (show) {
+                loadingIndicator.style.display = 'block';
+            } else {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function closeModalHandler() {
+            modal.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
