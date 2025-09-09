@@ -1,660 +1,1296 @@
+from django.shortcuts import render
 from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponse, Http404
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from django.utils.decorators import method_decorator
-from django.views import View
-import os
-import tempfile
-import mimetypes
-import zipfile
+from django.conf import settings
 import json
-import uuid
-from datetime import datetime, timedelta
-import logging
+import os
+import io
+import zipfile
+from datetime import datetime
+import tempfile
 
-# Third-party imports for file conversion
-try:
-    from PIL import Image, ImageEnhance, ImageFilter
-    import cv2
-    import numpy as np
-    from moviepy.editor import VideoFileClip, AudioFileClip
-    import librosa
-    import soundfile as sf
-    from pydub import AudioSegment
-    import pytesseract
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import letter, A4
-    from PyPDF2 import PdfReader, PdfWriter
-    import docx
-    from docx2pdf import convert as docx_to_pdf
-    import pandas as pd
-    import openpyxl
-    from markdown import markdown
-    import pdfkit
-    import camelot
-    from fpdf import FPDF
-    import xml.etree.ElementTree as ET
-    import yaml
-    import csv
-    import subprocess
-    import magic
-except ImportError as e:
-    print(f"Warning: Some conversion libraries not installed: {e}")
+# PDF processing libraries
+import PyPDF2
+from PyPDF2 import PdfReader, PdfWriter
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.utils import ImageReader
+from PIL import Image
+import fitz  # PyMuPDF for advanced operations
+from pdf2image import convert_from_path, convert_from_bytes
+import pdfplumber
+import pytesseract
+from fpdf import FPDF
 
-logger = logging.getLogger(__name__)
-
-class FileConverterView(View):
-    """Main file converter view handling all conversion requests"""
+# Utility functions
+def save_uploaded_file(uploaded_file):
+    """Save uploaded file temporarily and return path"""
+    temp_dir = tempfile.mkdtemp()
+    file_path = os.path.join(temp_dir, uploaded_file.name)
     
-    # Supported conversion mappings
-    CONVERSION_MATRIX = {
-        # Image conversions
-        'image': {
-            'from': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'svg', 'ico', 'raw'],
-            'to': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'ico', 'pdf']
-        },
-        # Document conversions
-        'document': {
-            'from': ['pdf', 'docx', 'doc', 'txt', 'rtf', 'odt', 'html', 'md', 'csv', 'xlsx', 'xls'],
-            'to': ['pdf', 'docx', 'txt', 'html', 'md', 'csv', 'xlsx', 'json', 'xml']
-        },
-        # Audio conversions
-        'audio': {
-            'from': ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'aiff'],
-            'to': ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a']
-        },
-        # Video conversions
-        'video': {
-            'from': ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', '3gp', 'mpg', 'mpeg'],
-            'to': ['mp4', 'avi', 'mov', 'webm', 'mkv', 'gif']
-        },
-        # Archive conversions
-        'archive': {
-            'from': ['zip', 'rar', '7z', 'tar', 'gz', 'bz2'],
-            'to': ['zip', 'tar', 'gz']
-        },
-        # Data conversions
-        'data': {
-            'from': ['json', 'xml', 'yaml', 'csv', 'xlsx', 'sql'],
-            'to': ['json', 'xml', 'yaml', 'csv', 'xlsx', 'sql']
-        }
+    with open(file_path, 'wb+') as destination:
+        for chunk in uploaded_file.chunks():
+            destination.write(chunk)
+    
+    return file_path
+
+def get_pdf_info(file_path):
+    """Extract basic PDF information"""
+    try:
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            info = {
+                'pages': len(reader.pages),
+                'title': reader.metadata.get('/Title', 'Unknown') if reader.metadata else 'Unknown',
+                'author': reader.metadata.get('/Author', 'Unknown') if reader.metadata else 'Unknown',
+                'subject': reader.metadata.get('/Subject', 'Unknown') if reader.metadata else 'Unknown',
+                'creator': reader.metadata.get('/Creator', 'Unknown') if reader.metadata else 'Unknown',
+                'producer': reader.metadata.get('/Producer', 'Unknown') if reader.metadata else 'Unknown',
+                'creation_date': reader.metadata.get('/CreationDate', 'Unknown') if reader.metadata else 'Unknown',
+            }
+            return info
+    except Exception as e:
+        return {'error': str(e)}
+
+# Main views
+def pdf_tools_home(request):
+    """Home page for PDF tools"""
+    context = {
+        'title': 'Universal PDF Tools',
+        'tools': [
+            'Extract Text', 'Extract Images', 'Split PDF', 'Merge PDFs',
+            'Compress PDF', 'Convert to Images', 'Add Watermark', 'Remove Password',
+            'Add Password', 'Rotate Pages', 'Delete Pages', 'Rearrange Pages',
+            'PDF to Word', 'Images to PDF', 'HTML to PDF', 'Extract Pages'
+        ]
     }
-    
-    def get(self, request):
-        """Display the main converter interface"""
-        context = {
-            'supported_formats': self._get_all_supported_formats(),
-            'conversion_matrix': self.CONVERSION_MATRIX
-        }
-        return render(request, 'file.html', context)
-    
-    @method_decorator(csrf_exempt)
-    def post(self, request):
-        """Handle file conversion requests"""
-        try:
-            if 'file' not in request.FILES:
-                return JsonResponse({'error': 'No file uploaded'}, status=400)
-            
-            uploaded_file = request.FILES['file']
-            target_format = request.POST.get('target_format', '').lower()
-            
-            if not target_format:
-                return JsonResponse({'error': 'Target format not specified'}, status=400)
-            
-            # Generate unique filename
-            file_id = str(uuid.uuid4())
-            original_name = uploaded_file.name
-            file_ext = os.path.splitext(original_name)[1][1:].lower()
-            
-            # Save uploaded file temporarily
-            temp_input_path = self._save_temp_file(uploaded_file, file_id, file_ext)
-            
-            # Determine file type and convert
-            file_type = self._get_file_type(file_ext)
-            
-            if not self._is_conversion_supported(file_ext, target_format):
-                return JsonResponse({
-                    'error': f'Conversion from {file_ext} to {target_format} not supported'
-                }, status=400)
-            
-            # Perform conversion
-            converted_file_path = self._convert_file(
-                temp_input_path, file_ext, target_format, file_id
-            )
-            
-            if converted_file_path:
-                # Generate download URL
-                download_url = f'/download/{file_id}.{target_format}'
-                
-                return JsonResponse({
-                    'success': True,
-                    'download_url': download_url,
-                    'original_name': original_name,
-                    'converted_name': f"{os.path.splitext(original_name)[0]}.{target_format}",
-                    'file_id': file_id
-                })
-            else:
-                return JsonResponse({'error': 'Conversion failed'}, status=500)
-                
-        except Exception as e:
-            logger.error(f"Conversion error: {str(e)}")
-            return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
-    
-    def _save_temp_file(self, uploaded_file, file_id, extension):
-        """Save uploaded file to temporary location"""
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
+    return render(request, 'pdftools.html', context)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def upload_pdf(request):
+    """Handle PDF file upload and return basic info"""
+    try:
+        if 'pdf_file' not in request.FILES:
+            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
         
-        temp_path = os.path.join(temp_dir, f"{file_id}.{extension}")
+        pdf_file = request.FILES['pdf_file']
         
-        with open(temp_path, 'wb+') as destination:
-            for chunk in uploaded_file.chunks():
-                destination.write(chunk)
+        if not pdf_file.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'Please upload a valid PDF file'}, status=400)
         
-        return temp_path
-    
-    def _get_file_type(self, extension):
-        """Determine file type category"""
-        for category, formats in self.CONVERSION_MATRIX.items():
-            if extension in formats['from']:
-                return category
-        return 'unknown'
-    
-    def _is_conversion_supported(self, from_ext, to_ext):
-        """Check if conversion is supported"""
-        for category, formats in self.CONVERSION_MATRIX.items():
-            if from_ext in formats['from'] and to_ext in formats['to']:
-                return True
-        return False
-    
-    def _convert_file(self, input_path, from_ext, to_ext, file_id):
-        """Main conversion dispatcher"""
-        try:
-            file_type = self._get_file_type(from_ext)
-            
-            if file_type == 'image':
-                return self._convert_image(input_path, from_ext, to_ext, file_id)
-            elif file_type == 'document':
-                return self._convert_document(input_path, from_ext, to_ext, file_id)
-            elif file_type == 'audio':
-                return self._convert_audio(input_path, from_ext, to_ext, file_id)
-            elif file_type == 'video':
-                return self._convert_video(input_path, from_ext, to_ext, file_id)
-            elif file_type == 'archive':
-                return self._convert_archive(input_path, from_ext, to_ext, file_id)
-            elif file_type == 'data':
-                return self._convert_data(input_path, from_ext, to_ext, file_id)
-            else:
-                return None
-                
-        except Exception as e:
-            logger.error(f"File conversion error: {str(e)}")
-            return None
-    
-    def _convert_image(self, input_path, from_ext, to_ext, file_id):
-        """Convert image files"""
-        try:
-            output_path = os.path.join(
-                settings.MEDIA_ROOT, 'converted', f"{file_id}.{to_ext}"
-            )
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            if to_ext == 'pdf':
-                # Convert image to PDF
-                img = Image.open(input_path)
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                img.save(output_path, 'PDF')
-            else:
-                # Standard image conversion
-                img = Image.open(input_path)
-                
-                # Handle transparency for formats that don't support it
-                if to_ext in ['jpg', 'jpeg'] and img.mode in ['RGBA', 'LA', 'P']:
-                    background = Image.new('RGB', img.size, (255, 255, 255))
-                    if img.mode == 'P':
-                        img = img.convert('RGBA')
-                    background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                    img = background
-                
-                # Save with appropriate format
-                if to_ext == 'jpg':
-                    img.save(output_path, 'JPEG', quality=95)
-                else:
-                    img.save(output_path, to_ext.upper())
-            
-            return output_path
-            
-        except Exception as e:
-            logger.error(f"Image conversion error: {str(e)}")
-            return None
-    
-    def _convert_document(self, input_path, from_ext, to_ext, file_id):
-        """Convert document files"""
-        try:
-            output_path = os.path.join(
-                settings.MEDIA_ROOT, 'converted', f"{file_id}.{to_ext}"
-            )
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            if from_ext == 'pdf' and to_ext == 'txt':
-                # PDF to text
-                with open(input_path, 'rb') as file:
-                    reader = PdfReader(file)
-                    text = ""
-                    for page in reader.pages:
-                        text += page.extract_text()
-                
-                with open(output_path, 'w', encoding='utf-8') as output_file:
-                    output_file.write(text)
-            
-            elif from_ext == 'docx' and to_ext == 'pdf':
-                # DOCX to PDF
-                docx_to_pdf(input_path, output_path)
-            
-            elif from_ext == 'md' and to_ext == 'html':
-                # Markdown to HTML
-                with open(input_path, 'r', encoding='utf-8') as md_file:
-                    content = md_file.read()
-                    html = markdown(content)
-                
-                with open(output_path, 'w', encoding='utf-8') as html_file:
-                    html_file.write(html)
-            
-            elif from_ext == 'csv' and to_ext == 'xlsx':
-                # CSV to Excel
-                df = pd.read_csv(input_path)
-                df.to_excel(output_path, index=False)
-            
-            elif from_ext == 'xlsx' and to_ext == 'csv':
-                # Excel to CSV
-                df = pd.read_excel(input_path)
-                df.to_csv(output_path, index=False)
-            
-            elif from_ext == 'html' and to_ext == 'pdf':
-                # HTML to PDF
-                pdfkit.from_file(input_path, output_path)
-            
-            elif to_ext == 'txt':
-                # Generic text extraction
-                content = self._extract_text_content(input_path, from_ext)
-                with open(output_path, 'w', encoding='utf-8') as output_file:
-                    output_file.write(content)
-            
-            return output_path
-            
-        except Exception as e:
-            logger.error(f"Document conversion error: {str(e)}")
-            return None
-    
-    def _convert_audio(self, input_path, from_ext, to_ext, file_id):
-        """Convert audio files"""
-        try:
-            output_path = os.path.join(
-                settings.MEDIA_ROOT, 'converted', f"{file_id}.{to_ext}"
-            )
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            # Use pydub for audio conversion
-            audio = AudioSegment.from_file(input_path)
-            
-            if to_ext == 'mp3':
-                audio.export(output_path, format='mp3', bitrate='192k')
-            elif to_ext == 'wav':
-                audio.export(output_path, format='wav')
-            elif to_ext == 'flac':
-                audio.export(output_path, format='flac')
-            elif to_ext == 'aac':
-                audio.export(output_path, format='aac')
-            elif to_ext == 'ogg':
-                audio.export(output_path, format='ogg')
-            elif to_ext == 'm4a':
-                audio.export(output_path, format='m4a')
-            
-            return output_path
-            
-        except Exception as e:
-            logger.error(f"Audio conversion error: {str(e)}")
-            return None
-    
-    def _convert_video(self, input_path, from_ext, to_ext, file_id):
-        """Convert video files"""
-        try:
-            output_path = os.path.join(
-                settings.MEDIA_ROOT, 'converted', f"{file_id}.{to_ext}"
-            )
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            if to_ext == 'gif':
-                # Convert video to GIF
-                clip = VideoFileClip(input_path)
-                clip.write_gif(output_path, fps=15)
-            else:
-                # Standard video conversion
-                clip = VideoFileClip(input_path)
-                
-                if to_ext == 'mp4':
-                    clip.write_videofile(output_path, codec='libx264')
-                elif to_ext == 'avi':
-                    clip.write_videofile(output_path, codec='libxvid')
-                elif to_ext == 'mov':
-                    clip.write_videofile(output_path, codec='libx264')
-                elif to_ext == 'webm':
-                    clip.write_videofile(output_path, codec='libvpx')
-                elif to_ext == 'mkv':
-                    clip.write_videofile(output_path, codec='libx264')
-            
-            return output_path
-            
-        except Exception as e:
-            logger.error(f"Video conversion error: {str(e)}")
-            return None
-    
-    def _convert_archive(self, input_path, from_ext, to_ext, file_id):
-        """Convert archive files"""
-        try:
-            output_path = os.path.join(
-                settings.MEDIA_ROOT, 'converted', f"{file_id}.{to_ext}"
-            )
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            # Extract and recompress
-            temp_extract_dir = os.path.join(
-                settings.MEDIA_ROOT, 'temp', f"extract_{file_id}"
-            )
-            os.makedirs(temp_extract_dir, exist_ok=True)
-            
-            # Extract original archive
-            if from_ext == 'zip':
-                with zipfile.ZipFile(input_path, 'r') as zip_ref:
-                    zip_ref.extractall(temp_extract_dir)
-            # Add more archive formats as needed
-            
-            # Create new archive
-            if to_ext == 'zip':
-                with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                    for root, dirs, files in os.walk(temp_extract_dir):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path, temp_extract_dir)
-                            zip_file.write(file_path, arcname)
-            
-            return output_path
-            
-        except Exception as e:
-            logger.error(f"Archive conversion error: {str(e)}")
-            return None
-    
-    def _convert_data(self, input_path, from_ext, to_ext, file_id):
-        """Convert data files"""
-        try:
-            output_path = os.path.join(
-                settings.MEDIA_ROOT, 'converted', f"{file_id}.{to_ext}"
-            )
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            # Read input data
-            if from_ext == 'json':
-                with open(input_path, 'r') as f:
-                    data = json.load(f)
-            elif from_ext == 'yaml':
-                with open(input_path, 'r') as f:
-                    data = yaml.safe_load(f)
-            elif from_ext == 'csv':
-                data = pd.read_csv(input_path).to_dict('records')
-            elif from_ext == 'xlsx':
-                data = pd.read_excel(input_path).to_dict('records')
-            
-            # Write output data
-            if to_ext == 'json':
-                with open(output_path, 'w') as f:
-                    json.dump(data, f, indent=2)
-            elif to_ext == 'yaml':
-                with open(output_path, 'w') as f:
-                    yaml.dump(data, f, default_flow_style=False)
-            elif to_ext == 'csv':
-                df = pd.DataFrame(data)
-                df.to_csv(output_path, index=False)
-            elif to_ext == 'xlsx':
-                df = pd.DataFrame(data)
-                df.to_excel(output_path, index=False)
-            elif to_ext == 'xml':
-                # Convert to XML
-                root = ET.Element('data')
-                for item in data:
-                    record = ET.SubElement(root, 'record')
-                    for key, value in item.items():
-                        field = ET.SubElement(record, key)
-                        field.text = str(value)
-                
-                tree = ET.ElementTree(root)
-                tree.write(output_path, encoding='utf-8', xml_declaration=True)
-            
-            return output_path
-            
-        except Exception as e:
-            logger.error(f"Data conversion error: {str(e)}")
-            return None
-    
-    def _extract_text_content(self, file_path, file_ext):
-        """Extract text content from various file formats"""
-        try:
-            if file_ext == 'docx':
-                doc = docx.Document(file_path)
-                return '\n'.join([para.text for para in doc.paragraphs])
-            elif file_ext == 'pdf':
-                with open(file_path, 'rb') as file:
-                    reader = PdfReader(file)
-                    text = ""
-                    for page in reader.pages:
-                        text += page.extract_text()
-                return text
-            elif file_ext in ['txt', 'md', 'html']:
-                with open(file_path, 'r', encoding='utf-8') as file:
-                    return file.read()
-            else:
-                return "Text extraction not supported for this format"
-        except Exception as e:
-            return f"Error extracting text: {str(e)}"
-    
-    def _get_all_supported_formats(self):
-        """Get all supported file formats"""
-        all_formats = set()
-        for category, formats in self.CONVERSION_MATRIX.items():
-            all_formats.update(formats['from'])
-            all_formats.update(formats['to'])
-        return sorted(list(all_formats))
+        # Save file temporarily
+        file_path = save_uploaded_file(pdf_file)
+        
+        # Get PDF info
+        pdf_info = get_pdf_info(file_path)
+        
+        # Store file path in session for subsequent operations
+        request.session['current_pdf'] = file_path
+        request.session['original_filename'] = pdf_file.name
+        
+        return JsonResponse({
+            'success': True,
+            'filename': pdf_file.name,
+            'info': pdf_info,
+            'operations_available': True
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
-
-class FileDownloadView(View):
-    """Handle file downloads"""
-    
-    def get(self, request, file_id):
-        """Download converted file"""
+@csrf_exempt
+@require_http_methods(["POST"])
+def extract_text(request):
+    """Extract text from PDF"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        extracted_text = []
+        
+        # Method 1: Try PyPDF2 first
         try:
-            file_path = os.path.join(
-                settings.MEDIA_ROOT, 'converted', file_id
-            )
-            
-            if not os.path.exists(file_path):
-                raise Http404("File not found")
-            
-            # Get file mime type
-            mime_type, _ = mimetypes.guess_type(file_path)
-            if mime_type is None:
-                mime_type = 'application/octet-stream'
-            
-            # Read file content
-            with open(file_path, 'rb') as f:
-                file_data = f.read()
-            
-            # Create response
-            response = HttpResponse(file_data, content_type=mime_type)
-            response['Content-Disposition'] = f'attachment; filename="{file_id}"'
-            response['Content-Length'] = len(file_data)
-            
-            return response
-            
-        except Exception as e:
-            logger.error(f"Download error: {str(e)}")
-            raise Http404("File not found")
-
-
-class BatchConverterView(View):
-    """Handle batch file conversions"""
-    
-    @method_decorator(csrf_exempt)
-    def post(self, request):
-        """Handle batch conversion requests"""
-        try:
-            files = request.FILES.getlist('files')
-            target_format = request.POST.get('target_format', '').lower()
-            
-            if not files:
-                return JsonResponse({'error': 'No files uploaded'}, status=400)
-            
-            if not target_format:
-                return JsonResponse({'error': 'Target format not specified'}, status=400)
-            
-            results = []
-            converter = FileConverterView()
-            
-            for uploaded_file in files:
-                try:
-                    file_id = str(uuid.uuid4())
-                    original_name = uploaded_file.name
-                    file_ext = os.path.splitext(original_name)[1][1:].lower()
-                    
-                    # Save and convert file
-                    temp_input_path = converter._save_temp_file(uploaded_file, file_id, file_ext)
-                    
-                    if converter._is_conversion_supported(file_ext, target_format):
-                        converted_file_path = converter._convert_file(
-                            temp_input_path, file_ext, target_format, file_id
-                        )
-                        
-                        if converted_file_path:
-                            results.append({
-                                'success': True,
-                                'original_name': original_name,
-                                'download_url': f'/download/{file_id}.{target_format}',
-                                'file_id': file_id
-                            })
-                        else:
-                            results.append({
-                                'success': False,
-                                'original_name': original_name,
-                                'error': 'Conversion failed'
-                            })
-                    else:
-                        results.append({
-                            'success': False,
-                            'original_name': original_name,
-                            'error': f'Conversion from {file_ext} to {target_format} not supported'
-                        })
-                        
-                except Exception as e:
-                    results.append({
-                        'success': False,
-                        'original_name': uploaded_file.name,
-                        'error': str(e)
+            with open(file_path, 'rb') as file:
+                reader = PdfReader(file)
+                for page_num, page in enumerate(reader.pages, 1):
+                    text = page.extract_text()
+                    extracted_text.append({
+                        'page': page_num,
+                        'text': text,
+                        'method': 'PyPDF2'
                     })
+        except:
+            # Method 2: Use pdfplumber as fallback
+            try:
+                with pdfplumber.open(file_path) as pdf:
+                    for page_num, page in enumerate(pdf.pages, 1):
+                        text = page.extract_text() or ""
+                        extracted_text.append({
+                            'page': page_num,
+                            'text': text,
+                            'method': 'pdfplumber'
+                        })
+            except:
+                # Method 3: OCR as last resort
+                try:
+                    doc = fitz.open(file_path)
+                    for page_num in range(len(doc)):
+                        page = doc.load_page(page_num)
+                        pix = page.get_pixmap()
+                        img_data = pix.tobytes("png")
+                        img = Image.open(io.BytesIO(img_data))
+                        text = pytesseract.image_to_string(img)
+                        extracted_text.append({
+                            'page': page_num + 1,
+                            'text': text,
+                            'method': 'OCR'
+                        })
+                    doc.close()
+                except Exception as e:
+                    return JsonResponse({'error': f'Text extraction failed: {str(e)}'}, status=500)
+        
+        # Combine all text
+        full_text = "\n\n".join([f"Page {item['page']}:\n{item['text']}" for item in extracted_text])
+        
+        return JsonResponse({
+            'success': True,
+            'text': full_text,
+            'pages': extracted_text,
+            'total_pages': len(extracted_text)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def extract_images(request):
+    """Extract images from PDF"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        images = []
+        doc = fitz.open(file_path)
+        
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            image_list = page.get_images()
+            
+            for img_index, img in enumerate(image_list):
+                xref = img[0]
+                pix = fitz.Pixmap(doc, xref)
+                
+                if pix.n - pix.alpha < 4:  # GRAY or RGB
+                    img_data = pix.tobytes("png")
+                    
+                    # Save image temporarily
+                    temp_dir = tempfile.mkdtemp()
+                    img_filename = f"page_{page_num + 1}_img_{img_index + 1}.png"
+                    img_path = os.path.join(temp_dir, img_filename)
+                    
+                    with open(img_path, 'wb') as img_file:
+                        img_file.write(img_data)
+                    
+                    images.append({
+                        'page': page_num + 1,
+                        'image_index': img_index + 1,
+                        'filename': img_filename,
+                        'path': img_path,
+                        'size': len(img_data)
+                    })
+                
+                pix = None
+        
+        doc.close()
+        
+        return JsonResponse({
+            'success': True,
+            'images': images,
+            'total_images': len(images)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def split_pdf(request):
+    """Split PDF into individual pages or ranges"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body)
+        split_type = data.get('split_type', 'pages')  # 'pages' or 'ranges'
+        ranges = data.get('ranges', [])  # List of ranges like [{'start': 1, 'end': 5}]
+        
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            total_pages = len(reader.pages)
+            
+            split_files = []
+            
+            if split_type == 'pages':
+                # Split into individual pages
+                for page_num in range(total_pages):
+                    writer = PdfWriter()
+                    writer.add_page(reader.pages[page_num])
+                    
+                    # Save split file
+                    temp_dir = tempfile.mkdtemp()
+                    split_filename = f"page_{page_num + 1}.pdf"
+                    split_path = os.path.join(temp_dir, split_filename)
+                    
+                    with open(split_path, 'wb') as output_file:
+                        writer.write(output_file)
+                    
+                    split_files.append({
+                        'filename': split_filename,
+                        'path': split_path,
+                        'pages': f"{page_num + 1}"
+                    })
+            
+            elif split_type == 'ranges' and ranges:
+                # Split by ranges
+                for i, page_range in enumerate(ranges):
+                    start = max(1, page_range.get('start', 1)) - 1  # Convert to 0-based
+                    end = min(total_pages, page_range.get('end', total_pages))
+                    
+                    writer = PdfWriter()
+                    for page_num in range(start, end):
+                        writer.add_page(reader.pages[page_num])
+                    
+                    # Save split file
+                    temp_dir = tempfile.mkdtemp()
+                    split_filename = f"pages_{start + 1}_to_{end}.pdf"
+                    split_path = os.path.join(temp_dir, split_filename)
+                    
+                    with open(split_path, 'wb') as output_file:
+                        writer.write(output_file)
+                    
+                    split_files.append({
+                        'filename': split_filename,
+                        'path': split_path,
+                        'pages': f"{start + 1}-{end}"
+                    })
+        
+        return JsonResponse({
+            'success': True,
+            'split_files': split_files,
+            'total_files': len(split_files)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def merge_pdfs(request):
+    """Merge multiple PDF files"""
+    try:
+        if 'pdf_files' not in request.FILES:
+            return JsonResponse({'error': 'No PDF files uploaded'}, status=400)
+        
+        pdf_files = request.FILES.getlist('pdf_files')
+        
+        if len(pdf_files) < 2:
+            return JsonResponse({'error': 'At least 2 PDF files required for merging'}, status=400)
+        
+        writer = PdfWriter()
+        
+        for pdf_file in pdf_files:
+            if not pdf_file.name.lower().endswith('.pdf'):
+                continue
+                
+            file_path = save_uploaded_file(pdf_file)
+            
+            with open(file_path, 'rb') as file:
+                reader = PdfReader(file)
+                for page in reader.pages:
+                    writer.add_page(page)
+        
+        # Save merged file
+        temp_dir = tempfile.mkdtemp()
+        merged_filename = f"merged_pdf_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        merged_path = os.path.join(temp_dir, merged_filename)
+        
+        with open(merged_path, 'wb') as output_file:
+            writer.write(output_file)
+        
+        return JsonResponse({
+            'success': True,
+            'merged_file': {
+                'filename': merged_filename,
+                'path': merged_path
+            },
+            'total_input_files': len(pdf_files)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def compress_pdf(request):
+    """Compress PDF file"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        # Get original file size
+        original_size = os.path.getsize(file_path)
+        
+        # Open and rewrite PDF (basic compression)
+        doc = fitz.open(file_path)
+        
+        temp_dir = tempfile.mkdtemp()
+        compressed_filename = f"compressed_{request.session.get('original_filename', 'file.pdf')}"
+        compressed_path = os.path.join(temp_dir, compressed_filename)
+        
+        # Save with compression
+        doc.save(compressed_path, garbage=4, deflate=True, clean=True)
+        doc.close()
+        
+        # Get compressed file size
+        compressed_size = os.path.getsize(compressed_path)
+        compression_ratio = (original_size - compressed_size) / original_size * 100
+        
+        return JsonResponse({
+            'success': True,
+            'compressed_file': {
+                'filename': compressed_filename,
+                'path': compressed_path
+            },
+            'original_size': original_size,
+            'compressed_size': compressed_size,
+            'compression_ratio': round(compression_ratio, 2)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def convert_to_images(request):
+    """Convert PDF pages to images"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body) if request.body else {}
+        image_format = data.get('format', 'PNG').upper()
+        dpi = data.get('dpi', 200)
+        
+        # Convert PDF to images
+        images = convert_from_path(file_path, dpi=dpi)
+        
+        image_files = []
+        temp_dir = tempfile.mkdtemp()
+        
+        for i, image in enumerate(images):
+            image_filename = f"page_{i + 1}.{image_format.lower()}"
+            image_path = os.path.join(temp_dir, image_filename)
+            
+            image.save(image_path, image_format)
+            
+            image_files.append({
+                'page': i + 1,
+                'filename': image_filename,
+                'path': image_path,
+                'format': image_format,
+                'size': os.path.getsize(image_path)
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'images': image_files,
+            'total_images': len(image_files),
+            'format': image_format,
+            'dpi': dpi
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_watermark(request):
+    """Add watermark to PDF"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body)
+        watermark_text = data.get('text', 'WATERMARK')
+        opacity = data.get('opacity', 0.3)
+        position = data.get('position', 'center')  # center, top-left, top-right, bottom-left, bottom-right
+        
+        doc = fitz.open(file_path)
+        
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            
+            # Get page dimensions
+            page_rect = page.rect
+            
+            # Set position
+            if position == 'center':
+                x = page_rect.width / 2
+                y = page_rect.height / 2
+            elif position == 'top-left':
+                x, y = 50, 50
+            elif position == 'top-right':
+                x, y = page_rect.width - 150, 50
+            elif position == 'bottom-left':
+                x, y = 50, page_rect.height - 50
+            elif position == 'bottom-right':
+                x, y = page_rect.width - 150, page_rect.height - 50
+            else:
+                x = page_rect.width / 2
+                y = page_rect.height / 2
+            
+            # Add text watermark
+            page.insert_text(
+                (x, y),
+                watermark_text,
+                fontsize=36,
+                color=(0.5, 0.5, 0.5),
+                rotate=45,
+                overlay=True
+            )
+        
+        # Save watermarked PDF
+        temp_dir = tempfile.mkdtemp()
+        watermarked_filename = f"watermarked_{request.session.get('original_filename', 'file.pdf')}"
+        watermarked_path = os.path.join(temp_dir, watermarked_filename)
+        
+        doc.save(watermarked_path)
+        doc.close()
+        
+        return JsonResponse({
+            'success': True,
+            'watermarked_file': {
+                'filename': watermarked_filename,
+                'path': watermarked_path
+            },
+            'watermark_text': watermark_text,
+            'position': position
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_password(request):
+    """Add password protection to PDF"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body)
+        password = data.get('password', '')
+        
+        if not password:
+            return JsonResponse({'error': 'Password is required'}, status=400)
+        
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            writer = PdfWriter()
+            
+            # Copy all pages
+            for page in reader.pages:
+                writer.add_page(page)
+            
+            # Add password
+            writer.encrypt(password)
+            
+            # Save password-protected PDF
+            temp_dir = tempfile.mkdtemp()
+            protected_filename = f"password_protected_{request.session.get('original_filename', 'file.pdf')}"
+            protected_path = os.path.join(temp_dir, protected_filename)
+            
+            with open(protected_path, 'wb') as output_file:
+                writer.write(output_file)
+        
+        return JsonResponse({
+            'success': True,
+            'protected_file': {
+                'filename': protected_filename,
+                'path': protected_path
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def remove_password(request):
+    """Remove password from PDF"""
+    try:
+        if 'pdf_file' not in request.FILES:
+            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
+        
+        pdf_file = request.FILES['pdf_file']
+        data = json.loads(request.POST.get('data', '{}'))
+        password = data.get('password', '')
+        
+        if not password:
+            return JsonResponse({'error': 'Password is required'}, status=400)
+        
+        file_path = save_uploaded_file(pdf_file)
+        
+        try:
+            with open(file_path, 'rb') as file:
+                reader = PdfReader(file)
+                
+                if reader.is_encrypted:
+                    reader.decrypt(password)
+                
+                writer = PdfWriter()
+                
+                # Copy all pages
+                for page in reader.pages:
+                    writer.add_page(page)
+                
+                # Save unprotected PDF
+                temp_dir = tempfile.mkdtemp()
+                unprotected_filename = f"unprotected_{pdf_file.name}"
+                unprotected_path = os.path.join(temp_dir, unprotected_filename)
+                
+                with open(unprotected_path, 'wb') as output_file:
+                    writer.write(output_file)
             
             return JsonResponse({
                 'success': True,
-                'results': results,
-                'total_files': len(files),
-                'successful_conversions': len([r for r in results if r['success']])
+                'unprotected_file': {
+                    'filename': unprotected_filename,
+                    'path': unprotected_path
+                }
             })
             
-        except Exception as e:
-            logger.error(f"Batch conversion error: {str(e)}")
-            return JsonResponse({'error': f'Batch conversion failed: {str(e)}'}, status=500)
-
-
-class ConversionHistoryView(View):
-    """View conversion history"""
-    
-    def get(self, request):
-        """Display conversion history"""
-        # This would typically fetch from database
-        # For now, return empty history
-        return JsonResponse({
-            'history': [],
-            'total': 0
-        })
-
-
-class SupportedFormatsView(View):
-    """API endpoint for supported formats"""
-    
-    def get(self, request):
-        """Return supported formats and conversion matrix"""
-        converter = FileConverterView()
-        return JsonResponse({
-            'conversion_matrix': converter.CONVERSION_MATRIX,
-            'all_formats': converter._get_all_supported_formats()
-        })
-
-
-# Utility functions
-def cleanup_temp_files():
-    """Clean up temporary files older than 24 hours"""
-    try:
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
-        converted_dir = os.path.join(settings.MEDIA_ROOT, 'converted')
+        except Exception as decrypt_error:
+            return JsonResponse({'error': 'Invalid password or cannot decrypt PDF'}, status=400)
         
-        cutoff_time = datetime.now() - timedelta(hours=24)
-        
-        for directory in [temp_dir, converted_dir]:
-            if os.path.exists(directory):
-                for filename in os.listdir(directory):
-                    file_path = os.path.join(directory, filename)
-                    if os.path.isfile(file_path):
-                        file_time = datetime.fromtimestamp(os.path.getctime(file_path))
-                        if file_time < cutoff_time:
-                            os.remove(file_path)
-                            logger.info(f"Cleaned up old file: {file_path}")
-    
     except Exception as e:
-        logger.error(f"Cleanup error: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
 
-
-@require_http_methods(["GET"])
-def health_check(request):
-    """Health check endpoint"""
-    return JsonResponse({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
-        'supported_formats': len(FileConverterView()._get_all_supported_formats())
-    })
-
-
-@require_http_methods(["POST"])
 @csrf_exempt
-def quick_convert(request):
-    """Quick conversion API endpoint"""
+@require_http_methods(["POST"])
+def rotate_pages(request):
+    """Rotate PDF pages"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body)
+        rotation = data.get('rotation', 90)  # 90, 180, 270, -90
+        pages = data.get('pages', 'all')  # 'all' or list of page numbers
+        
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            writer = PdfWriter()
+            
+            total_pages = len(reader.pages)
+            
+            if pages == 'all':
+                pages_to_rotate = list(range(total_pages))
+            else:
+                pages_to_rotate = [p - 1 for p in pages if 1 <= p <= total_pages]  # Convert to 0-based
+            
+            for page_num in range(total_pages):
+                page = reader.pages[page_num]
+                
+                if page_num in pages_to_rotate:
+                    page.rotate(rotation)
+                
+                writer.add_page(page)
+            
+            # Save rotated PDF
+            temp_dir = tempfile.mkdtemp()
+            rotated_filename = f"rotated_{request.session.get('original_filename', 'file.pdf')}"
+            rotated_path = os.path.join(temp_dir, rotated_filename)
+            
+            with open(rotated_path, 'wb') as output_file:
+                writer.write(output_file)
+        
+        return JsonResponse({
+            'success': True,
+            'rotated_file': {
+                'filename': rotated_filename,
+                'path': rotated_path
+            },
+            'rotation': rotation,
+            'pages_rotated': len(pages_to_rotate)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_pages(request):
+    """Delete specific pages from PDF"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body)
+        pages_to_delete = data.get('pages', [])  # List of page numbers to delete
+        
+        if not pages_to_delete:
+            return JsonResponse({'error': 'No pages specified for deletion'}, status=400)
+        
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            writer = PdfWriter()
+            
+            total_pages = len(reader.pages)
+            pages_to_delete_zero_based = [p - 1 for p in pages_to_delete if 1 <= p <= total_pages]
+            
+            for page_num in range(total_pages):
+                if page_num not in pages_to_delete_zero_based:
+                    writer.add_page(reader.pages[page_num])
+            
+            if len(writer.pages) == 0:
+                return JsonResponse({'error': 'Cannot delete all pages'}, status=400)
+            
+            # Save PDF with deleted pages
+            temp_dir = tempfile.mkdtemp()
+            modified_filename = f"deleted_pages_{request.session.get('original_filename', 'file.pdf')}"
+            modified_path = os.path.join(temp_dir, modified_filename)
+            
+            with open(modified_path, 'wb') as output_file:
+                writer.write(output_file)
+        
+        return JsonResponse({
+            'success': True,
+            'modified_file': {
+                'filename': modified_filename,
+                'path': modified_path
+            },
+            'original_pages': total_pages,
+            'remaining_pages': len(writer.pages),
+            'deleted_pages': len(pages_to_delete_zero_based)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def images_to_pdf(request):
+    """Convert images to PDF"""
+    try:
+        if 'image_files' not in request.FILES:
+            return JsonResponse({'error': 'No image files uploaded'}, status=400)
+        
+        image_files = request.FILES.getlist('image_files')
+        
+        if not image_files:
+            return JsonResponse({'error': 'No image files provided'}, status=400)
+        
+        pdf = FPDF()
+        
+        for image_file in image_files:
+            # Save image temporarily
+            temp_dir = tempfile.mkdtemp()
+            image_path = os.path.join(temp_dir, image_file.name)
+            
+            with open(image_path, 'wb+') as destination:
+                for chunk in image_file.chunks():
+                    destination.write(chunk)
+            
+            # Add image to PDF
+            try:
+                img = Image.open(image_path)
+                img_width, img_height = img.size
+                
+                # Convert to RGB if necessary
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                    rgb_path = image_path.replace(image_file.name, f"rgb_{image_file.name}")
+                    img.save(rgb_path)
+                    image_path = rgb_path
+                
+                pdf.add_page()
+                
+                # Calculate dimensions to fit page
+                page_width = 210  # A4 width in mm
+                page_height = 297  # A4 height in mm
+                
+                aspect_ratio = img_width / img_height
+                
+                if aspect_ratio > page_width / page_height:
+                    # Image is wider
+                    width = page_width - 20  # 10mm margin on each side
+                    height = width / aspect_ratio
+                else:
+                    # Image is taller
+                    height = page_height - 20  # 10mm margin on top and bottom
+                    width = height * aspect_ratio
+                
+                # Center the image
+                x = (page_width - width) / 2
+                y = (page_height - height) / 2
+                
+                pdf.image(image_path, x, y, width, height)
+                
+            except Exception as img_error:
+                continue  # Skip problematic images
+        
+        if pdf.page_count() == 0:
+            return JsonResponse({'error': 'No valid images could be processed'}, status=400)
+        
+        # Save PDF
+        temp_dir = tempfile.mkdtemp()
+        pdf_filename = f"images_to_pdf_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        pdf_path = os.path.join(temp_dir, pdf_filename)
+        
+        pdf.output(pdf_path, 'F')
+        
+        return JsonResponse({
+            'success': True,
+            'pdf_file': {
+                'filename': pdf_filename,
+                'path': pdf_path
+            },
+            'total_images': len(image_files),
+            'processed_images': pdf.page_count()
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+def download_file(request, file_type):
+    """Download processed file"""
+    try:
+        file_path = request.GET.get('path', '')
+        filename = request.GET.get('filename', 'download.pdf')
+        
+        if not file_path or not os.path.exists(file_path):
+            return HttpResponse('File not found', status=404)
+        
+        response = FileResponse(
+            open(file_path, 'rb'),
+            as_attachment=True,
+            filename=filename
+        )
+        
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f'Error downloading file: {str(e)}', status=500)
+
+def download_zip(request):
+    """Download multiple files as ZIP"""
+    try:
+        file_paths = request.GET.getlist('paths')
+        filenames = request.GET.getlist('filenames')
+        
+        if not file_paths:
+            return HttpResponse('No files specified', status=400)
+        
+        # Create ZIP file
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for i, file_path in enumerate(file_paths):
+                if os.path.exists(file_path):
+                    filename = filenames[i] if i < len(filenames) else f"file_{i+1}.pdf"
+                    zip_file.write(file_path, filename)
+        
+        zip_buffer.seek(0)
+        
+        response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="pdf_tools_files_{datetime.now().strftime("%Y%m%d_%H%M%S")}.zip"'
+        
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f'Error creating ZIP file: {str(e)}', status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def extract_pages(request):
+    """Extract specific pages from PDF"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body)
+        pages_to_extract = data.get('pages', [])  # List of page numbers to extract
+        
+        if not pages_to_extract:
+            return JsonResponse({'error': 'No pages specified for extraction'}, status=400)
+        
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            writer = PdfWriter()
+            
+            total_pages = len(reader.pages)
+            valid_pages = [p - 1 for p in pages_to_extract if 1 <= p <= total_pages]  # Convert to 0-based
+            
+            for page_num in valid_pages:
+                writer.add_page(reader.pages[page_num])
+            
+            if len(writer.pages) == 0:
+                return JsonResponse({'error': 'No valid pages to extract'}, status=400)
+            
+            # Save extracted pages
+            temp_dir = tempfile.mkdtemp()
+            extracted_filename = f"extracted_pages_{request.session.get('original_filename', 'file.pdf')}"
+            extracted_path = os.path.join(temp_dir, extracted_filename)
+            
+            with open(extracted_path, 'wb') as output_file:
+                writer.write(output_file)
+        
+        return JsonResponse({
+            'success': True,
+            'extracted_file': {
+                'filename': extracted_filename,
+                'path': extracted_path
+            },
+            'original_pages': total_pages,
+            'extracted_pages': len(valid_pages)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def rearrange_pages(request):
+    """Rearrange pages in PDF"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body)
+        page_order = data.get('page_order', [])  # List of page numbers in desired order
+        
+        if not page_order:
+            return JsonResponse({'error': 'No page order specified'}, status=400)
+        
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            writer = PdfWriter()
+            
+            total_pages = len(reader.pages)
+            
+            # Validate page order
+            valid_pages = [p - 1 for p in page_order if 1 <= p <= total_pages]  # Convert to 0-based
+            
+            # Add pages in the specified order
+            for page_num in valid_pages:
+                writer.add_page(reader.pages[page_num])
+            
+            if len(writer.pages) == 0:
+                return JsonResponse({'error': 'No valid pages in the specified order'}, status=400)
+            
+            # Save rearranged PDF
+            temp_dir = tempfile.mkdtemp()
+            rearranged_filename = f"rearranged_{request.session.get('original_filename', 'file.pdf')}"
+            rearranged_path = os.path.join(temp_dir, rearranged_filename)
+            
+            with open(rearranged_path, 'wb') as output_file:
+                writer.write(output_file)
+        
+        return JsonResponse({
+            'success': True,
+            'rearranged_file': {
+                'filename': rearranged_filename,
+                'path': rearranged_path
+            },
+            'original_pages': total_pages,
+            'new_order': page_order
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def html_to_pdf(request):
+    """Convert HTML content to PDF"""
     try:
         data = json.loads(request.body)
-        from_format = data.get('from_format', '').lower()
-        to_format = data.get('to_format', '').lower()
+        html_content = data.get('html_content', '')
         
-        converter = FileConverterView()
+        if not html_content:
+            return JsonResponse({'error': 'No HTML content provided'}, status=400)
         
-        if converter._is_conversion_supported(from_format, to_format):
-            return JsonResponse({
-                'supported': True,
-                'message': f'Conversion from {from_format} to {to_format} is supported'
-            })
-        else:
-            return JsonResponse({
-                'supported': False,
-                'message': f'Conversion from {from_format} to {to_format} is not supported'
-            })
-    
+        # Using weasyprint or pdfkit for HTML to PDF conversion
+        # This is a simplified version - you might want to use libraries like:
+        # - weasyprint
+        # - pdfkit (requires wkhtmltopdf)
+        # - reportlab with HTML parsing
+        
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import inch
+        import html2text
+        
+        # Convert HTML to plain text (basic conversion)
+        h = html2text.HTML2Text()
+        h.ignore_links = True
+        text_content = h.handle(html_content)
+        
+        # Create PDF
+        temp_dir = tempfile.mkdtemp()
+        pdf_filename = f"html_to_pdf_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        pdf_path = os.path.join(temp_dir, pdf_filename)
+        
+        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Add content as paragraphs
+        for line in text_content.split('\n'):
+            if line.strip():
+                para = Paragraph(line, styles['Normal'])
+                story.append(para)
+                story.append(Spacer(1, 0.1*inch))
+        
+        doc.build(story)
+        
+        return JsonResponse({
+            'success': True,
+            'pdf_file': {
+                'filename': pdf_filename,
+                'path': pdf_path
+            }
+        })
+        
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def pdf_to_word(request):
+    """Convert PDF to Word document (basic text extraction)"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        # Extract text from PDF
+        extracted_text = []
+        
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                for page in pdf.pages:
+                    text = page.extract_text() or ""
+                    extracted_text.append(text)
+        except:
+            # Fallback to PyPDF2
+            with open(file_path, 'rb') as file:
+                reader = PdfReader(file)
+                for page in reader.pages:
+                    text = page.extract_text()
+                    extracted_text.append(text)
+        
+        # Create Word document using python-docx
+        from docx import Document
+        
+        doc = Document()
+        doc.add_heading('Converted from PDF', 0)
+        
+        for i, page_text in enumerate(extracted_text, 1):
+            if page_text.strip():
+                doc.add_heading(f'Page {i}', level=1)
+                doc.add_paragraph(page_text)
+        
+        # Save Word document
+        temp_dir = tempfile.mkdtemp()
+        word_filename = f"pdf_to_word_{request.session.get('original_filename', 'file.pdf').replace('.pdf', '.docx')}"
+        word_path = os.path.join(temp_dir, word_filename)
+        
+        doc.save(word_path)
+        
+        return JsonResponse({
+            'success': True,
+            'word_file': {
+                'filename': word_filename,
+                'path': word_path
+            },
+            'total_pages': len(extracted_text)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def batch_process(request):
+    """Process multiple PDFs with the same operation"""
+    try:
+        if 'pdf_files' not in request.FILES:
+            return JsonResponse({'error': 'No PDF files uploaded'}, status=400)
+        
+        pdf_files = request.FILES.getlist('pdf_files')
+        data = json.loads(request.POST.get('operation_data', '{}'))
+        operation = data.get('operation', '')
+        
+        if not operation:
+            return JsonResponse({'error': 'No operation specified'}, status=400)
+        
+        results = []
+        
+        for pdf_file in pdf_files:
+            if not pdf_file.name.lower().endswith('.pdf'):
+                continue
+            
+            try:
+                file_path = save_uploaded_file(pdf_file)
+                
+                # Store in session temporarily for operation
+                request.session['current_pdf'] = file_path
+                request.session['original_filename'] = pdf_file.name
+                
+                # Perform operation based on type
+                if operation == 'extract_text':
+                    # Extract text
+                    with pdfplumber.open(file_path) as pdf:
+                        text = ""
+                        for page in pdf.pages:
+                            text += page.extract_text() or ""
+                    
+                    results.append({
+                        'filename': pdf_file.name,
+                        'operation': 'extract_text',
+                        'result': 'success',
+                        'text_length': len(text)
+                    })
+                
+                elif operation == 'compress':
+                    # Compress PDF
+                    doc = fitz.open(file_path)
+                    temp_dir = tempfile.mkdtemp()
+                    compressed_path = os.path.join(temp_dir, f"compressed_{pdf_file.name}")
+                    
+                    doc.save(compressed_path, garbage=4, deflate=True, clean=True)
+                    doc.close()
+                    
+                    original_size = os.path.getsize(file_path)
+                    compressed_size = os.path.getsize(compressed_path)
+                    
+                    results.append({
+                        'filename': pdf_file.name,
+                        'operation': 'compress',
+                        'result': 'success',
+                        'original_size': original_size,
+                        'compressed_size': compressed_size,
+                        'compression_ratio': round((original_size - compressed_size) / original_size * 100, 2),
+                        'output_path': compressed_path
+                    })
+                
+                elif operation == 'convert_to_images':
+                    # Convert to images
+                    images = convert_from_path(file_path, dpi=200)
+                    temp_dir = tempfile.mkdtemp()
+                    
+                    image_paths = []
+                    for i, image in enumerate(images):
+                        image_path = os.path.join(temp_dir, f"{pdf_file.name}_page_{i+1}.png")
+                        image.save(image_path, 'PNG')
+                        image_paths.append(image_path)
+                    
+                    results.append({
+                        'filename': pdf_file.name,
+                        'operation': 'convert_to_images',
+                        'result': 'success',
+                        'total_images': len(images),
+                        'image_paths': image_paths
+                    })
+                
+                # Add more operations as needed
+                
+            except Exception as file_error:
+                results.append({
+                    'filename': pdf_file.name,
+                    'operation': operation,
+                    'result': 'error',
+                    'error': str(file_error)
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'operation': operation,
+            'total_files': len(pdf_files),
+            'results': results
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def get_pdf_metadata(request):
+    """Get detailed metadata from PDF"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        metadata = {}
+        
+        # Basic metadata using PyPDF2
+        with open(file_path, 'rb') as file:
+            reader = PdfReader(file)
+            
+            if reader.metadata:
+                metadata.update({
+                    'title': reader.metadata.get('/Title', 'Unknown'),
+                    'author': reader.metadata.get('/Author', 'Unknown'),
+                    'subject': reader.metadata.get('/Subject', 'Unknown'),
+                    'creator': reader.metadata.get('/Creator', 'Unknown'),
+                    'producer': reader.metadata.get('/Producer', 'Unknown'),
+                    'creation_date': str(reader.metadata.get('/CreationDate', 'Unknown')),
+                    'modification_date': str(reader.metadata.get('/ModDate', 'Unknown')),
+                })
+            
+            metadata.update({
+                'pages': len(reader.pages),
+                'encrypted': reader.is_encrypted,
+                'file_size': os.path.getsize(file_path)
+            })
+        
+        # Advanced metadata using PyMuPDF
+        try:
+            doc = fitz.open(file_path)
+            metadata.update({
+                'format': 'PDF',
+                'version': doc.pdf_version(),
+                'page_count': doc.page_count,
+                'needs_pass': doc.needs_pass,
+                'permissions': doc.permissions,
+                'language': doc.metadata.get('language', 'Unknown'),
+                'keywords': doc.metadata.get('keywords', 'Unknown'),
+            })
+            
+            # Get page dimensions
+            page_sizes = []
+            for page_num in range(min(5, doc.page_count)):  # First 5 pages
+                page = doc.load_page(page_num)
+                rect = page.rect
+                page_sizes.append({
+                    'page': page_num + 1,
+                    'width': round(rect.width, 2),
+                    'height': round(rect.height, 2),
+                    'rotation': page.rotation
+                })
+            
+            metadata['page_sizes'] = page_sizes
+            doc.close()
+            
+        except Exception as advanced_error:
+            metadata['advanced_error'] = str(advanced_error)
+        
+        return JsonResponse({
+            'success': True,
+            'metadata': metadata
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def optimize_pdf(request):
+    """Optimize PDF for web or print"""
+    try:
+        file_path = request.session.get('current_pdf')
+        if not file_path or not os.path.exists(file_path):
+            return JsonResponse({'error': 'No PDF file found'}, status=400)
+        
+        data = json.loads(request.body)
+        optimization_type = data.get('type', 'web')  # 'web' or 'print'
+        
+        doc = fitz.open(file_path)
+        
+        temp_dir = tempfile.mkdtemp()
+        optimized_filename = f"optimized_{optimization_type}_{request.session.get('original_filename', 'file.pdf')}"
+        optimized_path = os.path.join(temp_dir, optimized_filename)
+        
+        if optimization_type == 'web':
+            # Optimize for web (smaller file size, lower quality)
+            doc.save(
+                optimized_path,
+                garbage=4,
+                deflate=True,
+                clean=True,
+                ascii=True,
+                linear=True,
+                pretty=False
+            )
+        else:
+            # Optimize for print (better quality, larger file size)
+            doc.save(
+                optimized_path,
+                garbage=3,
+                deflate=True,
+                clean=True,
+                pretty=True
+            )
+        
+        doc.close()
+        
+        # Get file sizes
+        original_size = os.path.getsize(file_path)
+        optimized_size = os.path.getsize(optimized_path)
+        size_reduction = (original_size - optimized_size) / original_size * 100
+        
+        return JsonResponse({
+            'success': True,
+            'optimized_file': {
+                'filename': optimized_filename,
+                'path': optimized_path
+            },
+            'optimization_type': optimization_type,
+            'original_size': original_size,
+            'optimized_size': optimized_size,
+            'size_reduction': round(size_reduction, 2)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# Cleanup function
+def cleanup_temp_files(request):
+    """Clean up temporary files (call this periodically or on session end)"""
+    try:
+        # This would typically be called by a cleanup task or session middleware
+        temp_files = request.session.get('temp_files', [])
+        
+        for file_path in temp_files:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
+        
+        request.session['temp_files'] = []
+        
+        return JsonResponse({'success': True, 'cleaned_files': len(temp_files)})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
