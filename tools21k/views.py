@@ -26,4 +26,6 @@ def interest(request):
     return render(request, 'interest.html')
 def unit(request):
     return render(request, 'unit.html')
+def votings(request):
+    return render(request, 'ece_voting_system.html')
 
