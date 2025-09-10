@@ -301,6 +301,9 @@
             display: none;
             text-align: center;
             padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 20px 0;
         }
 
         .spinner {
@@ -456,6 +459,50 @@
             width: 80px;
             text-align: center;
         }
+
+        .pdf-reader {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .pdf-reader-header {
+            background: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pdf-reader-content {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.8;
+            background: white;
+        }
+
+        .pdf-page {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .pdf-page:last-child {
+            border-bottom: none;
+        }
+
+        .page-number {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -470,8 +517,8 @@
             <div class="upload-section" id="uploadSection">
                 <h2>Upload Your PDF</h2>
                 <p>Click to select or drag and drop your PDF file here</p>
-                <input type="file" id="pdfUpload" accept=".pdf" multiple>
-                <label for="pdfUpload" class="upload-btn">Choose PDF Files</label>
+                <input type="file" id="pdfUpload" accept=".pdf">
+                <label for="pdfUpload" class="upload-btn">Choose PDF File</label>
             </div>
 
             <!-- File Info -->
@@ -484,12 +531,7 @@
             <div class="tools-grid" id="toolsGrid">
                 <div class="tool-card disabled" data-tool="extract-text">
                     <h3>📝 Extract Text</h3>
-                    <p>Extract all text content from your PDF with multiple extraction methods including OCR</p>
-                </div>
-
-                <div class="tool-card disabled" data-tool="extract-images">
-                    <h3>🖼️ Extract Images</h3>
-                    <p>Extract all images from your PDF and download them individually</p>
+                    <p>Extract all text content from your PDF</p>
                 </div>
 
                 <div class="tool-card disabled" data-tool="split-pdf">
@@ -509,12 +551,7 @@
 
                 <div class="tool-card disabled" data-tool="add-watermark">
                     <h3>🏷️ Add Watermark</h3>
-                    <p>Add text or image watermarks to protect your document</p>
-                </div>
-
-                <div class="tool-card disabled" data-tool="add-password">
-                    <h3>🔒 Add Password</h3>
-                    <p>Protect your PDF with password encryption</p>
+                    <p>Add text watermarks to protect your document</p>
                 </div>
 
                 <div class="tool-card disabled" data-tool="rotate-pages">
@@ -532,14 +569,14 @@
                     <p>Extract specific pages into a new PDF document</p>
                 </div>
 
-                <div class="tool-card disabled" data-tool="rearrange-pages">
-                    <h3>🔀 Rearrange Pages</h3>
-                    <p>Change the order of pages in your PDF</p>
-                </div>
-
                 <div class="tool-card disabled" data-tool="get-metadata">
                     <h3>📊 View Metadata</h3>
                     <p>View detailed information about your PDF file</p>
+                </div>
+
+                <div class="tool-card disabled" data-tool="pdf-reader">
+                    <h3>📖 PDF Reader</h3>
+                    <p>Read your PDF document with a clean interface</p>
                 </div>
             </div>
         </div>
@@ -570,6 +607,7 @@
         let currentPDF = null;
         let currentPDFName = '';
         let currentPDFPages = 0;
+        let currentFileId = '';
 
         // DOM elements
         const uploadSection = document.getElementById('uploadSection');
@@ -583,6 +621,9 @@
         const closeModal = document.querySelector('.close');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const resultSection = document.getElementById('resultSection');
+
+        // Backend API base URL
+        const API_BASE = '/pdf-tools/';
 
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
@@ -613,7 +654,7 @@
         function handleFileUpload(event) {
             const files = Array.from(event.target.files);
             if (files.length > 0 && files[0].type === 'application/pdf') {
-                processPDFFile(files[0]);
+                uploadPDFFile(files[0]);
             }
         }
 
@@ -635,41 +676,54 @@
             const pdfFiles = files.filter(file => file.type === 'application/pdf');
             
             if (pdfFiles.length > 0) {
-                processPDFFile(pdfFiles[0]);
+                uploadPDFFile(pdfFiles[0]);
             } else {
                 showError('Please upload a valid PDF file.');
             }
         }
 
-        async function processPDFFile(file) {
+        async function uploadPDFFile(file) {
             try {
                 showLoading(true);
                 
-                const arrayBuffer = await file.arrayBuffer();
-                currentPDF = arrayBuffer;
-                currentPDFName = file.name;
+                const formData = new FormData();
+                formData.append('pdf_file', file);
                 
-                // Load PDF to get page count
-                const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-                currentPDFPages = pdfDoc.getPageCount();
+                const response = await fetch(API_BASE + 'upload/', {
+                    method: 'POST',
+                    body: formData,
+                    // Django CSRF token would be needed in a real implementation
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
+                });
                 
-                showFileInfo(file);
-                enableTools();
+                const result = await response.json();
                 
+                if (result.success) {
+                    currentFileId = result.file_id;
+                    currentPDFName = result.file_name;
+                    currentPDFPages = result.info.pages;
+                    
+                    showFileInfo(result);
+                    enableTools();
+                } else {
+                    showError(result.error || 'Upload failed');
+                }
             } catch (error) {
-                showError('Error processing PDF: ' + error.message);
+                showError('Error uploading file: ' + error.message);
             } finally {
                 showLoading(false);
             }
         }
 
-        function showFileInfo(file) {
+        function showFileInfo(result) {
             fileDetails.innerHTML = `
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    <div><strong>Filename:</strong> ${file.name}</div>
-                    <div><strong>Size:</strong> ${formatFileSize(file.size)}</div>
-                    <div><strong>Pages:</strong> ${currentPDFPages}</div>
-                    <div><strong>Type:</strong> ${file.type}</div>
+                    <div><strong>Filename:</strong> ${result.file_name}</div>
+                    <div><strong>Size:</strong> ${formatFileSize(result.info.size)}</div>
+                    <div><strong>Pages:</strong> ${result.info.pages}</div>
+                    <div><strong>Title:</strong> ${result.info.title || 'N/A'}</div>
+                    <div><strong>Author:</strong> ${result.info.author || 'N/A'}</div>
+                    <div><strong>Subject:</strong> ${result.info.subject || 'N/A'}</div>
                 </div>
             `;
             fileInfo.style.display = 'block';
@@ -704,17 +758,15 @@
         function getToolTitle(tool) {
             const titles = {
                 'extract-text': 'Extract Text from PDF',
-                'extract-images': 'Extract Images from PDF',
                 'split-pdf': 'Split PDF',
                 'merge-pdfs': 'Merge PDF Files',
                 'compress-pdf': 'Compress PDF',
                 'add-watermark': 'Add Watermark',
-                'add-password': 'Add Password Protection',
                 'rotate-pages': 'Rotate Pages',
                 'delete-pages': 'Delete Pages',
                 'extract-pages': 'Extract Pages',
-                'rearrange-pages': 'Rearrange Pages',
-                'get-metadata': 'View PDF Metadata'
+                'get-metadata': 'View PDF Metadata',
+                'pdf-reader': 'PDF Reader'
             };
             return titles[tool] || 'PDF Tool';
         }
@@ -725,12 +777,6 @@
                     return `
                         <p>Extract all text content from your PDF.</p>
                         <button class="btn-primary" onclick="extractText()">Extract Text</button>
-                    `;
-                
-                case 'extract-images':
-                    return `
-                        <p>Extract all images from your PDF document.</p>
-                        <button class="btn-primary" onclick="extractImages()">Extract Images</button>
                     `;
                 
                 case 'split-pdf':
@@ -772,30 +818,7 @@
                             <label>Watermark Text:</label>
                             <input type="text" id="watermarkText" placeholder="Enter watermark text" value="CONFIDENTIAL">
                         </div>
-                        <div class="form-group">
-                            <label>Position:</label>
-                            <select id="watermarkPosition">
-                                <option value="center">Center</option>
-                                <option value="top-left">Top Left</option>
-                                <option value="top-right">Top Right</option>
-                                <option value="bottom-left">Bottom Left</option>
-                                <option value="bottom-right">Bottom Right</option>
-                            </select>
-                        </div>
                         <button class="btn-primary" onclick="addWatermark()">Add Watermark</button>
-                    `;
-                
-                case 'add-password':
-                    return `
-                        <div class="form-group">
-                            <label>Password:</label>
-                            <input type="password" id="pdfPassword" placeholder="Enter password">
-                        </div>
-                        <div class="form-group">
-                            <label>Confirm Password:</label>
-                            <input type="password" id="confirmPassword" placeholder="Confirm password">
-                        </div>
-                        <button class="btn-primary" onclick="addPassword()">Add Password Protection</button>
                     `;
                 
                 case 'rotate-pages':
@@ -841,20 +864,16 @@
                         <button class="btn-primary" onclick="extractPages()">Extract Pages</button>
                     `;
                 
-                case 'rearrange-pages':
-                    return `
-                        <div class="form-group">
-                            <label>New Page Order:</label>
-                            <input type="text" id="newPageOrder" placeholder="Enter new order (e.g., 3,1,4,2)">
-                            <small>Specify the new order of pages. For example: 3,1,4,2 will make page 3 first, page 1 second, etc.</small>
-                        </div>
-                        <button class="btn-primary" onclick="rearrangePages()">Rearrange Pages</button>
-                    `;
-                
                 case 'get-metadata':
                     return `
                         <p>View detailed information about your PDF file.</p>
                         <button class="btn-primary" onclick="getMetadata()">View Metadata</button>
+                    `;
+                
+                case 'pdf-reader':
+                    return `
+                        <p>Read your PDF document with a clean interface.</p>
+                        <button class="btn-primary" onclick="openPDFReader()">Open PDF Reader</button>
                     `;
                 
                 default:
@@ -891,38 +910,27 @@
             try {
                 showProcessing();
                 
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                let fullText = '';
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
                 
-                for (let i = 0; i < pdfDoc.getPageCount(); i++) {
-                    const page = pdfDoc.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    fullText += `Page ${i + 1}:\n${pageText}\n\n`;
-                }
-                
-                showResult({
-                    success: true,
-                    text: fullText
+                const response = await fetch(API_BASE + 'extract-text/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
                 });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult({
+                        success: true,
+                        text: result.text
+                    });
+                } else {
+                    showError(result.error || 'Text extraction failed');
+                }
             } catch (error) {
                 showError('Error extracting text: ' + error.message);
-            }
-        }
-
-        async function extractImages() {
-            try {
-                showProcessing();
-                
-                // For client-side image extraction, we'd need a more complex solution
-                // This is a simplified version that just informs the user
-                showResult({
-                    success: true,
-                    message: "Image extraction works best with a server backend. For client-side extraction, consider using a dedicated library like pdf.js with canvas rendering."
-                });
-                
-            } catch (error) {
-                showError('Error extracting images: ' + error.message);
             }
         }
 
@@ -931,64 +939,34 @@
                 showProcessing();
                 
                 const splitType = document.getElementById('splitType').value;
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                const pageCount = pdfDoc.getPageCount();
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
+                formData.append('split_type', splitType);
                 
-                if (splitType === 'pages') {
-                    // Split into individual pages
-                    const zip = new JSZip();
-                    
-                    for (let i = 0; i < pageCount; i++) {
-                        const newPdfDoc = await PDFLib.PDFDocument.create();
-                        const [page] = await newPdfDoc.copyPages(pdfDoc, [i]);
-                        newPdfDoc.addPage(page);
-                        
-                        const pdfBytes = await newPdfDoc.save();
-                        zip.file(`page_${i + 1}.pdf`, pdfBytes);
-                    }
-                    
-                    const zipContent = await zip.generateAsync({type: 'blob'});
-                    saveAs(zipContent, `${currentPDFName.replace('.pdf', '')}_split_pages.zip`);
-                    
-                    showResult({
-                        success: true,
-                        message: `PDF split into ${pageCount} individual pages. Downloading ZIP file.`
-                    });
-                    
-                } else if (splitType === 'ranges') {
-                    // Split by ranges
-                    const rangesInput = document.getElementById('pageRanges').value;
-                    const ranges = parsePageRanges(rangesInput, pageCount);
-                    
-                    if (ranges.length === 0) {
-                        showError('Invalid page ranges format. Use format like "1-3,5-7"');
-                        return;
-                    }
-                    
-                    const zip = new JSZip();
-                    
-                    for (let i = 0; i < ranges.length; i++) {
-                        const range = ranges[i];
-                        const newPdfDoc = await PDFLib.PDFDocument.create();
-                        
-                        for (let j = range.start; j <= range.end; j++) {
-                            const [page] = await newPdfDoc.copyPages(pdfDoc, [j - 1]);
-                            newPdfDoc.addPage(page);
-                        }
-                        
-                        const pdfBytes = await newPdfDoc.save();
-                        zip.file(`pages_${range.start}-${range.end}.pdf`, pdfBytes);
-                    }
-                    
-                    const zipContent = await zip.generateAsync({type: 'blob'});
-                    saveAs(zipContent, `${currentPDFName.replace('.pdf', '')}_split_ranges.zip`);
-                    
-                    showResult({
-                        success: true,
-                        message: `PDF split into ${ranges.length} ranges. Downloading ZIP file.`
-                    });
+                if (splitType === 'ranges') {
+                    const ranges = document.getElementById('pageRanges').value;
+                    formData.append('page_ranges', ranges);
                 }
                 
+                const response = await fetch(API_BASE + 'split-pdf/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
+                });
+                
+                if (response.ok) {
+                    // Download the zip file
+                    const blob = await response.blob();
+                    saveAs(blob, 'split_pages.zip');
+                    
+                    showResult({
+                        success: true,
+                        message: 'PDF split successfully. Downloading ZIP file.'
+                    });
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'PDF split failed');
+                }
             } catch (error) {
                 showError('Error splitting PDF: ' + error.message);
             }
@@ -1004,30 +982,33 @@
                     return;
                 }
                 
-                const mergedPdf = await PDFLib.PDFDocument.create();
-                const mainPdf = await PDFLib.PDFDocument.load(currentPDF);
-                const mainPages = await mergedPdf.copyPages(mainPdf, mainPdf.getPageIndices());
-                mainPages.forEach(page => mergedPdf.addPage(page));
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
                 
+                // Add additional files
                 for (let i = 0; i < mergeFilesInput.files.length; i++) {
-                    const file = mergeFilesInput.files[i];
-                    if (file.type === 'application/pdf') {
-                        const arrayBuffer = await file.arrayBuffer();
-                        const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-                        const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                        pages.forEach(page => mergedPdf.addPage(page));
-                    }
+                    formData.append('pdf_files', mergeFilesInput.files[i]);
                 }
                 
-                const pdfBytes = await mergedPdf.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                saveAs(blob, `merged_${currentPDFName}`);
-                
-                showResult({
-                    success: true,
-                    message: 'PDFs merged successfully. Downloading merged file.'
+                const response = await fetch(API_BASE + 'merge-pdfs/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
                 });
                 
+                if (response.ok) {
+                    // Download the merged PDF
+                    const blob = await response.blob();
+                    saveAs(blob, 'merged_document.pdf');
+                    
+                    showResult({
+                        success: true,
+                        message: 'PDFs merged successfully. Downloading merged file.'
+                    });
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'PDF merge failed');
+                }
             } catch (error) {
                 showError('Error merging PDFs: ' + error.message);
             }
@@ -1037,22 +1018,28 @@
             try {
                 showProcessing();
                 
-                // Simple compression by re-saving the PDF
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                const pdfBytes = await pdfDoc.save();
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
                 
-                const originalSize = currentPDF.byteLength;
-                const compressedSize = pdfBytes.byteLength;
-                const ratio = ((originalSize - compressedSize) / originalSize * 100).toFixed(2);
-                
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                saveAs(blob, `compressed_${currentPDFName}`);
-                
-                showResult({
-                    success: true,
-                    message: `PDF compressed. Size reduced from ${formatFileSize(originalSize)} to ${formatFileSize(compressedSize)} (${ratio}% reduction). Downloading compressed file.`
+                const response = await fetch(API_BASE + 'compress-pdf/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
                 });
                 
+                if (response.ok) {
+                    // Download the compressed PDF
+                    const blob = await response.blob();
+                    saveAs(blob, 'compressed_document.pdf');
+                    
+                    showResult({
+                        success: true,
+                        message: 'PDF compressed successfully. Downloading compressed file.'
+                    });
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'PDF compression failed');
+                }
             } catch (error) {
                 showError('Error compressing PDF: ' + error.message);
             }
@@ -1063,66 +1050,32 @@
                 showProcessing();
                 
                 const watermarkText = document.getElementById('watermarkText').value || 'WATERMARK';
-                const position = document.getElementById('watermarkPosition').value || 'center';
                 
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                const pages = pdfDoc.getPages();
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
+                formData.append('watermark_text', watermarkText);
                 
-                for (let i = 0; i < pages.length; i++) {
-                    const page = pages[i];
-                    const { width, height } = page.getSize();
-                    
-                    // Draw watermark text
-                    page.drawText(watermarkText, {
-                        x: width / 2 - 100,
-                        y: height / 2,
-                        color: PDFLib.rgb(0.5, 0.5, 0.5),
-                        opacity: 0.3,
-                        size: 24,
-                        rotate: PDFLib.degrees(45)
-                    });
-                }
-                
-                const pdfBytes = await pdfDoc.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                saveAs(blob, `watermarked_${currentPDFName}`);
-                
-                showResult({
-                    success: true,
-                    message: 'Watermark added successfully. Downloading watermarked file.'
+                const response = await fetch(API_BASE + 'add-watermark/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
                 });
                 
+                if (response.ok) {
+                    // Download the watermarked PDF
+                    const blob = await response.blob();
+                    saveAs(blob, 'watermarked_document.pdf');
+                    
+                    showResult({
+                        success: true,
+                        message: 'Watermark added successfully. Downloading watermarked file.'
+                    });
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Watermark addition failed');
+                }
             } catch (error) {
                 showError('Error adding watermark: ' + error.message);
-            }
-        }
-
-        async function addPassword() {
-            try {
-                const password = document.getElementById('pdfPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-                
-                if (!password) {
-                    showError('Please enter a password');
-                    return;
-                }
-                
-                if (password !== confirmPassword) {
-                    showError('Passwords do not match');
-                    return;
-                }
-                
-                showProcessing();
-                
-                // Note: PDF-Lib doesn't support encryption in the free version
-                // This is a placeholder for demonstration
-                showResult({
-                    success: true,
-                    message: "Password protection requires a server backend or a premium PDF library. For client-side implementation, consider using a service like PSPDFKit or PDFTron."
-                });
-                
-            } catch (error) {
-                showError('Error adding password: ' + error.message);
             }
         }
 
@@ -1130,36 +1083,38 @@
             try {
                 showProcessing();
                 
-                const angle = parseInt(document.getElementById('rotationAngle').value);
+                const angle = document.getElementById('rotationAngle').value;
                 const selection = document.getElementById('rotatePageSelection').value;
-                let pageNumbers = [];
+                let pages = 'all';
                 
                 if (selection === 'specific') {
-                    const pagesInput = document.getElementById('rotatePageNumbers').value;
-                    pageNumbers = parsePageNumbers(pagesInput, currentPDFPages);
-                } else {
-                    // All pages
-                    pageNumbers = Array.from({length: currentPDFPages}, (_, i) => i + 1);
+                    pages = document.getElementById('rotatePageNumbers').value;
                 }
                 
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                const pages = pdfDoc.getPages();
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
+                formData.append('angle', angle);
+                formData.append('pages', pages);
                 
-                for (const pageNum of pageNumbers) {
-                    if (pageNum > 0 && pageNum <= pages.length) {
-                        pages[pageNum - 1].setRotation(PDFLib.degrees(angle));
-                    }
-                }
-                
-                const pdfBytes = await pdfDoc.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                saveAs(blob, `rotated_${currentPDFName}`);
-                
-                showResult({
-                    success: true,
-                    message: `Pages rotated successfully. Downloading modified file.`
+                const response = await fetch(API_BASE + 'rotate-pages/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
                 });
                 
+                if (response.ok) {
+                    // Download the rotated PDF
+                    const blob = await response.blob();
+                    saveAs(blob, 'rotated_document.pdf');
+                    
+                    showResult({
+                        success: true,
+                        message: 'Pages rotated successfully. Downloading modified file.'
+                    });
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Page rotation failed');
+                }
             } catch (error) {
                 showError('Error rotating pages: ' + error.message);
             }
@@ -1169,41 +1124,36 @@
             try {
                 showProcessing();
                 
-                const pagesInput = document.getElementById('deletePageNumbers').value;
-                const pagesToDelete = parsePageNumbers(pagesInput, currentPDFPages);
+                const pages = document.getElementById('deletePageNumbers').value;
                 
-                if (pagesToDelete.length === 0) {
-                    showError('Please specify valid page numbers to delete');
+                if (!pages) {
+                    showError('Please specify pages to delete');
                     return;
                 }
                 
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                const pageCount = pdfDoc.getPageCount();
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
+                formData.append('pages', pages);
                 
-                // Create new PDF without the deleted pages
-                const newPdfDoc = await PDFLib.PDFDocument.create();
-                
-                for (let i = 0; i < pageCount; i++) {
-                    if (!pagesToDelete.includes(i + 1)) {
-                        const [page] = await newPdfDoc.copyPages(pdfDoc, [i]);
-                        newPdfDoc.addPage(page);
-                    }
-                }
-                
-                if (newPdfDoc.getPageCount() === 0) {
-                    showError('Cannot delete all pages');
-                    return;
-                }
-                
-                const pdfBytes = await newPdfDoc.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                saveAs(blob, `deleted_pages_${currentPDFName}`);
-                
-                showResult({
-                    success: true,
-                    message: `Pages deleted successfully. Downloading modified file.`
+                const response = await fetch(API_BASE + 'delete-pages/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
                 });
                 
+                if (response.ok) {
+                    // Download the modified PDF
+                    const blob = await response.blob();
+                    saveAs(blob, 'modified_document.pdf');
+                    
+                    showResult({
+                        success: true,
+                        message: 'Pages deleted successfully. Downloading modified file.'
+                    });
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Page deletion failed');
+                }
             } catch (error) {
                 showError('Error deleting pages: ' + error.message);
             }
@@ -1213,71 +1163,38 @@
             try {
                 showProcessing();
                 
-                const pagesInput = document.getElementById('extractPageNumbers').value;
-                const pagesToExtract = parsePageNumbers(pagesInput, currentPDFPages);
+                const pages = document.getElementById('extractPageNumbers').value;
                 
-                if (pagesToExtract.length === 0) {
-                    showError('Please specify valid page numbers to extract');
+                if (!pages) {
+                    showError('Please specify pages to extract');
                     return;
                 }
                 
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                const newPdfDoc = await PDFLib.PDFDocument.create();
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
+                formData.append('pages', pages);
                 
-                for (const pageNum of pagesToExtract) {
-                    if (pageNum > 0 && pageNum <= pdfDoc.getPageCount()) {
-                        const [page] = await newPdfDoc.copyPages(pdfDoc, [pageNum - 1]);
-                        newPdfDoc.addPage(page);
-                    }
-                }
-                
-                const pdfBytes = await newPdfDoc.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                saveAs(blob, `extracted_pages_${currentPDFName}`);
-                
-                showResult({
-                    success: true,
-                    message: `Pages extracted successfully. Downloading new file.`
+                const response = await fetch(API_BASE + 'extract-pages/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
                 });
                 
+                if (response.ok) {
+                    // Download the extracted PDF
+                    const blob = await response.blob();
+                    saveAs(blob, 'extracted_pages.pdf');
+                    
+                    showResult({
+                        success: true,
+                        message: 'Pages extracted successfully. Downloading extracted file.'
+                    });
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Page extraction failed');
+                }
             } catch (error) {
                 showError('Error extracting pages: ' + error.message);
-            }
-        }
-
-        async function rearrangePages() {
-            try {
-                showProcessing();
-                
-                const orderInput = document.getElementById('newPageOrder').value;
-                const newOrder = orderInput.split(',').map(num => parseInt(num.trim()));
-                
-                if (newOrder.length === 0 || newOrder.some(isNaN)) {
-                    showError('Please specify a valid page order (e.g., "3,1,2")');
-                    return;
-                }
-                
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                const newPdfDoc = await PDFLib.PDFDocument.create();
-                
-                for (const pageNum of newOrder) {
-                    if (pageNum > 0 && pageNum <= pdfDoc.getPageCount()) {
-                        const [page] = await newPdfDoc.copyPages(pdfDoc, [pageNum - 1]);
-                        newPdfDoc.addPage(page);
-                    }
-                }
-                
-                const pdfBytes = await newPdfDoc.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                saveAs(blob, `rearranged_${currentPDFName}`);
-                
-                showResult({
-                    success: true,
-                    message: `Pages rearranged successfully. Downloading modified file.`
-                });
-                
-            } catch (error) {
-                showError('Error rearranging pages: ' + error.message);
             }
         }
 
@@ -1285,94 +1202,107 @@
             try {
                 showProcessing();
                 
-                const pdfDoc = await PDFLib.PDFDocument.load(currentPDF);
-                const metadata = {
-                    'Title': pdfDoc.getTitle(),
-                    'Author': pdfDoc.getAuthor(),
-                    'Subject': pdfDoc.getSubject(),
-                    'Creator': pdfDoc.getCreator(),
-                    'Producer': pdfDoc.getProducer(),
-                    'Creation Date': pdfDoc.getCreationDate(),
-                    'Modification Date': pdfDoc.getModificationDate(),
-                    'Page Count': pdfDoc.getPageCount(),
-                    'File Size': formatFileSize(currentPDF.byteLength)
-                };
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
                 
-                let metadataHTML = '<table class="metadata-table"><tbody>';
-                for (const [key, value] of Object.entries(metadata)) {
-                    metadataHTML += `<tr><th>${key}</th><td>${value || 'N/A'}</td></tr>`;
-                }
-                metadataHTML += '</tbody></table>';
-                
-                showResult({
-                    success: true,
-                    metadata: metadataHTML
+                const response = await fetch(API_BASE + 'get-metadata/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
                 });
                 
+                const result = await response.json();
+                
+                if (result.success) {
+                    let metadataHTML = '<table class="metadata-table"><tbody>';
+                    for (const [key, value] of Object.entries(result.metadata)) {
+                        metadataHTML += `<tr><th>${key}</th><td>${value}</td></tr>`;
+                    }
+                    metadataHTML += '</tbody></table>';
+                    
+                    showResult({
+                        success: true,
+                        metadata: metadataHTML
+                    });
+                } else {
+                    showError(result.error || 'Metadata extraction failed');
+                }
             } catch (error) {
                 showError('Error getting metadata: ' + error.message);
             }
         }
 
-        // Utility functions
-        function parsePageNumbers(input, maxPages) {
-            if (!input) return [];
-            
-            const result = new Set();
-            const parts = input.split(',');
-            
-            for (const part of parts) {
-                const trimmed = part.trim();
-                if (trimmed.includes('-')) {
-                    const [start, end] = trimmed.split('-').map(num => parseInt(num.trim()));
-                    if (!isNaN(start) && !isNaN(end)) {
-                        const realStart = Math.max(1, start);
-                        const realEnd = Math.min(maxPages, end);
-                        for (let i = realStart; i <= realEnd; i++) {
-                            result.add(i);
+        async function openPDFReader() {
+            try {
+                showProcessing();
+                
+                const formData = new FormData();
+                formData.append('file_id', currentFileId);
+                
+                const response = await fetch(API_BASE + 'pdf-reader/', {
+                    method: 'POST',
+                    body: formData,
+                    // headers: { 'X-CSRFToken': getCSRFToken() }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Format the text with page breaks
+                    let readerHTML = '<div class="pdf-reader">';
+                    readerHTML += '<div class="pdf-reader-header">';
+                    readerHTML += `<h3>${currentPDFName}</h3>`;
+                    readerHTML += `<span>${result.page_count} pages</span>`;
+                    readerHTML += '</div>';
+                    readerHTML += '<div class="pdf-reader-content">';
+                    
+                    // Split text by page markers
+                    const pageMatches = result.text.match(/--- Page \d+ ---/g);
+                    if (pageMatches) {
+                        let remainingText = result.text;
+                        for (let i = 0; i < pageMatches.length; i++) {
+                            const pageHeader = pageMatches[i];
+                            const pageEnd = i < pageMatches.length - 1 ? 
+                                remainingText.indexOf(pageMatches[i+1]) : remainingText.length;
+                            
+                            const pageContent = remainingText.substring(
+                                remainingText.indexOf(pageHeader) + pageHeader.length, 
+                                pageEnd
+                            ).trim();
+                            
+                            readerHTML += `
+                                <div class="pdf-page">
+                                    <div class="page-number">${pageHeader.replace('---', '').trim()}</div>
+                                    <div class="page-content">${formatTextForDisplay(pageContent)}</div>
+                                </div>
+                            `;
+                            
+                            remainingText = remainingText.substring(pageEnd);
                         }
+                    } else {
+                        readerHTML += `<div class="pdf-page"><div class="page-content">${formatTextForDisplay(result.text)}</div></div>`;
                     }
+                    
+                    readerHTML += '</div></div>';
+                    
+                    showResult({
+                        success: true,
+                        reader: readerHTML
+                    });
                 } else {
-                    const num = parseInt(trimmed);
-                    if (!isNaN(num) && num >= 1 && num <= maxPages) {
-                        result.add(num);
-                    }
+                    showError(result.error || 'PDF reader failed');
                 }
+            } catch (error) {
+                showError('Error opening PDF reader: ' + error.message);
             }
-            
-            return Array.from(result).sort((a, b) => a - b);
         }
 
-        function parsePageRanges(input, maxPages) {
-            if (!input) return [];
-            
-            const result = [];
-            const parts = input.split(',');
-            
-            for (const part of parts) {
-                const trimmed = part.trim();
-                if (trimmed.includes('-')) {
-                    const [start, end] = trimmed.split('-').map(num => parseInt(num.trim()));
-                    if (!isNaN(start) && !isNaN(end)) {
-                        result.push({
-                            start: Math.max(1, start),
-                            end: Math.min(maxPages, end)
-                        });
-                    }
-                } else {
-                    const num = parseInt(trimmed);
-                    if (!isNaN(num) && num >= 1 && num <= maxPages) {
-                        result.push({
-                            start: num,
-                            end: num
-                        });
-                    }
-                }
-            }
-            
-            return result;
+        function formatTextForDisplay(text) {
+            // Convert line breaks to HTML
+            return text.replace(/\n/g, '<br>');
         }
 
+        // Utility functions
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
@@ -1415,6 +1345,15 @@
                     `;
                 }
                 
+                if (result.reader) {
+                    html += `
+                        <div style="margin-top: 20px;">
+                            <h3>PDF Reader:</h3>
+                            ${result.reader}
+                        </div>
+                    `;
+                }
+                
                 resultSection.innerHTML = html;
             } else {
                 showError(result.error || 'An unknown error occurred');
@@ -1437,6 +1376,22 @@
 
         function closeModalHandler() {
             modal.style.display = 'none';
+        }
+
+        // CSRF token function for Django
+        function getCSRFToken() {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 10) === ('csrftoken=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(10));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
         }
     </script>
 </body>
