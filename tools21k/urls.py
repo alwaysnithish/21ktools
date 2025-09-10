@@ -28,6 +28,7 @@ urlpatterns = [
     path('',views.home,name='home'),
     path('timecalculator/',views.time,name='time'),
     path('unitconverter/',views.unit,name='unit'),
+    path('votings',views.votings,name='votings'),
     path('interestcalculator/',views.interest,name='interest'),
     #path('download/', include('videodownloader.urls')),  # Include app URLs at root
     
