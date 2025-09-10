@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECE Student Voting System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            padding: 50px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+
+        .header .college-info {
+            color: #888;
+            font-size: 1em;
+            font-style: italic;
+        }
+
+        /* Login Section Styles */
+        .login-container {
+            padding: 30px 0;
+        }
+
+        .welcome-message {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .welcome-message h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .welcome-message p {
+            color: #666;
+            font-size: 1.1em;
+            line-height: 1.5;
+        }
+
+        .google-signin-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border: 2px solid #dadce0;
+            border-radius: 12px;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #3c4043;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            width: 100%;
+            max-width: 350px;
+            margin: 10px auto;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .google-signin-btn:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-color: #4285f4;
+            transform: translateY(-1px);
+        }
+
+        .google-signin-btn i {
+            font-size: 20px;
+            margin-right: 15px;
+            color: #4285f4;
+        }
+
+        /* User Info Section */
+        .user-profile {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            text-align: left;
+            border: 2px solid #e1e5e9;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-right: 20px;
+            border: 3px solid #667eea;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-details h3 {
+            color: #333;
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+
+        .user-details p {
+            color: #666;
+            margin: 3px 0;
+            font-size: 1em;
+        }
+
+        .verification-status {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        .verification-status i {
+            margin-right: 8px;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .form-group label i {
+            margin-right: 8px;
+            color: #667eea;
+        }
+
+        .input-container {
+            position: relative;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px 20px;
+            padding-left: 50px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .input-hint {
+            color: #888;
+            font-size: 14px;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* Button Styles */
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
+        }
+
+        /* Voting Section */
+        .voting-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .voting-header h2 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .voting-header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .candidates-container {
+            display: grid;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .candidate {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 3px solid #e1e5e9;
+            border-radius: 15px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .candidate::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .candidate:hover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f0f2ff 0%, #e6e9ff 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .candidate:hover::before {
+            left: 100%;
+        }
+
+        .candidate.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .candidate-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .candidate-icon {
+            font-size: 2.5em;
+            margin-right: 20px;
+            width: 60px;
+            text-align: center;
+        }
+
+        .candidate-info h3 {
+            font-size: 1.4em;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .candidate-info p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .candidate-details {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .candidate.selected .candidate-details {
+            border-top-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .candidate:not(.selected) .candidate-details {
+            border-top-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Message Styles */
+        .message {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+            font-weight: 600;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .message i {
+            font-size: 1.3em;
+            margin-right: 12px;
+        }
+
+        .success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        /* Statistics Section */
+        .stats-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e1e5e9;
+        }
+
+        .stats-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .stats-header h3 {
+            color: #333;
+            font-size: 1.5em;
+            margin-left: 10px;
+        }
+
+        .stats-header i {
+            color: #667eea;
+            font-size: 1.8em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid #e1e5e9;
+        }
+
+        .stat-card i {
+            font-size: 2em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #333;
+            display: block;
+        }
+
+        .stat-card .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Hidden sections */
+        .hidden {
+            display: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 25px;
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .google-signin-btn {
+                font-size: 16px;
+                padding: 12px 25px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
+            .candidate-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .candidate-icon {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <h1><i class="fas fa-vote-yea"></i> ECE Voting System</h1>
+            <p class="subtitle">Student Council Elections 2024</p>
+            <p class="college-info">RGUKT College - Electronics & Communication Engineering</p>
+        </div>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="login-container">
+            <div class="welcome-message">
+                <h3><i class="fas fa-info-circle"></i> Welcome to the ECE Student Council Elections</h3>
+                <p>Please sign in with your RGUKT Google account to participate in the voting process. Only verified ECE students (ID: b221301 - b221400) can vote.</p>
+            </div>
+
+            <div id="g_id_onload"
+                 data-client_id="154014439211-c8s3ce03tpju7k32qdnechim8bm0svf0.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            
+            <button class="google-signin-btn" onclick="initiateGoogleSignIn()">
+                <i class="fab fa-google"></i>
+                Sign in with Google
+            </button>
+
+            <div class="message info">
+                <i class="fas fa-shield-alt"></i>
+                Secure authentication required - Use your RGUKT email account
+            </div>
+        </div>
+
+        <!-- Verification Section -->
+        <div id="verificationSection" class="hidden">
+            <div id="userProfile" class="user-profile">
+                <!-- User profile will be populated here -->
+            </div>
+            
+            <div class="form-group">
+                <label for="studentId">
+                    <i class="fas fa-id-card"></i> Confirm Your Student ID
+                </label>
+                <div class="input-container">
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" id="studentId" placeholder="Enter your ID (e.g., b221350)" maxlength="7">
+                </div>
+                <div class="input-hint">This should match your email prefix (e.g., b221350@rgukt.ac.in)</div>
+            </div>
+            
+            <button class="btn" onclick="verifyAndProceed()">
+                <i class="fas fa-check-circle"></i> Verify & Continue to Vote
+            </button>
+            <button class="btn btn-secondary" onclick="signOut()">
+                <i class="fas fa-sign-out-alt"></i> Sign Out
+            </button>
+        </div>
+
+        <!-- Voting Section -->
+        <div id="votingSection" class="hidden">
+            <div class="voting-header">
+                <h2><i class="fas fa-ballot"></i> Cast Your Vote</h2>
+                <p>Select your preferred candidate for the ECE Student Council</p>
+            </div>
+
+            <div class="candidates-container">
+                <div class="candidate" onclick="selectCandidate('candidate1')">
+                    <div class="candidate-header">
+                        <div class="candidate-icon">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div class="candidate-info">
+                            <h3>John Smith</h3>
+                            <p><strong>President</strong></p>
+                        </div>
+                    </div>
+                    <div class="candidate-details">
+                        <p><i class="fas fa-quote-left"></i> "Innovation for Progress - Leading ECE into the digital future"</p>
+                    </div>
+                </div>
+
+                <div class="candidate" onclick="selectCandidate('candidate2')">
+                    <div class="candidate-header">
+                        <div class="candidate-icon">
+                            <i class="fas fa-medal"></i>
+                        </div>
+                        <div class="candidate-info">
+                            <h3>Sarah Johnson</h3>
+                            <p><strong>Vice President</strong></p>
+                        </div>
+                    </div>
+                    <div class="candidate-details">
+                        <p><i class="fas fa-quote-left"></i> "Unity and Excellence - Building bridges for student success"</p>
+                    </div>
+                </div>
+
+                <div class="candidate" onclick="selectCandidate('candidate3')">
+                    <div class="candidate-header">
+                        <div class="candidate-icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="candidate-info">
+                            <h3>Mike Davis</h3>
+                            <p><strong>Secretary</strong></p>
+                        </div>
+                    </div>
+                    <div class="candidate-details">
+                        <p><i class="fas fa-quote-left"></i> "Transparency First - Open communication and accountability"</p>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn" id="submitVoteBtn" onclick="submitVote()" disabled>
+                <i class="fas fa-paper-plane"></i> Submit Vote
+            </button>
+            <button class="btn btn-secondary" onclick="completeLogout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+
+        <!-- Message Area -->
+        <div id="messageArea"></div>
+
+        <!-- Statistics Section -->
+        <div class="stats-section">
+            <div class="stats-header">
+                <i class="fas fa-chart-pie"></i>
+                <h3>Voting Statistics</h3>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <span class="stat-number" id="totalVoters">100</span>
+                    <span class="stat-label">Eligible Voters</span>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-vote-yea"></i>
+                    <span class="stat-number" id="votesCast">0</span>
+                    <span class="stat-label">Votes Cast</span>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-percentage"></i>
+                    <span class="stat-number" id="turnout">0%</span>
+                    <span class="stat-label">Turnout</span>
+                </div>
+                
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <span class="stat-number" id="remaining">100</span>
+                    <span class="stat-label">Remaining</span>
+                </div>
+            </div>
+
+            <button class="btn btn-danger" onclick="resetSystem()">
+                <i class="fas fa-redo"></i> Reset System
+            </button>
+        </div>
+    </div>
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <script>
+        // ECE Students database (ID range: b221301 to b221400)
+        const validStudents = [];
+        for (let i = 301; i <= 400; i++) {
+            const studentId = `b2213${String(i).slice(-2)}`;
+            validStudents.push({
+                id: studentId,
+                email: `${studentId}@rgukt.ac.in`
+            });
+        }
+
+        // Application state
+        let votedStudents = [];
+        let currentUser = null;
+        let currentUserEmail = null;
+        let currentUserInfo = null;
+        let selectedCandidate = null;
+        let voteResults = {
+            candidate1: 0,
+            candidate2: 0,
+            candidate3: 0
+        };
+
+        // Initialize Google Sign-In
+        function initiateGoogleSignIn() {
+            google.accounts.id.prompt();
+        }
+
+        // Google Sign-In callback
+        function handleCredentialResponse(response) {
+            try {
+                const payload = parseJwt(response.credential);
+                console.log('Google Sign-In successful:', payload);
+                
+                // Validate RGUKT domain
+                if (!payload.email.endsWith('@rgukt.ac.in')) {
+                    showMessage('Please sign in with your RGUKT college email account (@rgukt.ac.in).', 'error');
+                    return;
+                }
+
+                currentUserEmail = payload.email.toLowerCase();
+                currentUserInfo = payload;
+                
+                // Show user profile and verification section
+                displayUserProfile(payload);
+                showSection('verificationSection');
+                
+                // Auto-populate student ID from email
+                const emailPrefix = payload.email.split('@')[0];
+                document.getElementById('studentId').value = emailPrefix;
+                
+                showMessage('Google authentication successful! Please verify your student ID.', 'success');
+                
+            } catch (error) {
+                console.error('Error processing sign-in:', error);
+                showMessage('Authentication error. Please try again.', 'error');
+            }
+        }
+
+        function displayUserProfile(userInfo) {
+            const profileDiv = document.getElementById('userProfile');
+            profileDiv.innerHTML = `
+                <div class="profile-header">
+                    <img src="${userInfo.picture}" alt="Profile" class="user-avatar">
+                    <div class="user-details">
+                        <h3><i class="fas fa-user"></i> ${userInfo.name}</h3>
+                        <p><i class="fas fa-envelope"></i> <strong>Email:</strong> ${userInfo.email}</p>
+                        <p><i class="fas fa-shield-check"></i> <strong>Domain:</strong> RGUKT College</p>
+                    </div>
+                </div>
+                <div class="verification-status">
+                    <i class="fas fa-check-circle"></i>
+                    Google Authentication Successful
+                </div>
+            `;
+        }
+
+        function verifyAndProceed() {
+            const studentId = document.getElementById('studentId').value.toLowerCase().trim();
+            
+            clearMessages();
+
+            if (!studentId) {
+                showMessage('Please enter your Student ID.', 'error');
+                return;
+            }
+
+            // Validate student ID format
+            const idPattern = /^b2213[0-9]{2}$/;
+            if (!idPattern.test(studentId)) {
+                showMessage('Invalid Student ID format! Should be like b221301, b221350, etc.', 'error');
+                return;
+            }
+
+            // Check if student exists in ECE database
+            const expectedEmail = `${studentId}@rgukt.ac.in`;
+            const student = validStudents.find(s => s.id === studentId && s.email === expectedEmail);
+            
+            if (!student) {
+                showMessage('Student ID not found in ECE database! Valid range: b221301 - b221400', 'error');
+                return;
+            }
+
+            // Verify email matches student ID
+            if (currentUserEmail !== expectedEmail) {
+                showMessage(`Student ID doesn't match your Google account. Expected: ${expectedEmail}`, 'error');
+                return;
+            }
+
+            // Check if already voted
+            if (votedStudents.includes(studentId)) {
+                showMessage('You have already voted! Thank you for participating.', 'warning');
+                return;
+            }
+
+            // Successful verification
+            currentUser = studentId;
+            showSection('votingSection');
+            showMessage('Verification successful! Please select your candidate and cast your vote.', 'success');
+        }
+
+        function selectCandidate(candidateId) {
+            // Remove previous selections
+            document.querySelectorAll('.candidate').forEach(c => c.classList.remove('selected'));
+            
+            // Select current candidate
+            event.target.closest('.candidate').classList.add('selected');
+            selectedCandidate = candidateId;
+            
+            // Enable submit button
+            document.getElementById('submitVoteBtn').disabled = false;
+            
+            showMessage('Candidate selected! Click "Submit Vote" to cast your vote.', 'info');
+        }
+
+        function submitVote() {
+            if (!selectedCandidate) {
+                showMessage('Please select a candidate before submitting your vote.', 'error');
+                return;
+            }
+
+            // Confirm vote submission
+            if (!confirm('Are you sure you want to submit your vote? This action cannot be undone.')) {
+                return;
+            }
+
+            // Record the vote
+            votedStudents.push(currentUser);
+            voteResults[selectedCandidate]++;
+            
+            // Update statistics
+            updateStatistics();
+            
+            showMessage('🎉 Your vote has been successfully recorded! Thank you for participating in the ECE Student Council Elections.', 'success');
+            
+            // Disable voting interface
+            document.querySelectorAll('.candidate').forEach(c => {
+                c.style.pointerEvents = 'none';
+                c.style.opacity = '0.7';
+            });
+            document.getElementById('submitVoteBtn').disabled = true;
+            
+            // Auto-logout after 5 seconds
+            setTimeout(() => {
+                completeLogout();
+            }, 5000);
+        }
+
+        function signOut() {
+            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                google.accounts.id.disableAutoSelect();
+            }
+            
+            currentUser = null;
+            currentUserEmail = null;
+            currentUserInfo = null;
+            
+            // Reset form
+            document.getElementById('studentId').value = '';
+            
+            showSection('loginSection');
+            clearMessages();
+            showMessage('Signed out successfully. You can sign in again to vote.', 'info');
+        }
+
+        function completeLogout() {
+            // Sign out from Google
+            signOut();
+            
+            // Reset candidate selection
+            document.querySelectorAll('.candidate').forEach(c => {
+                c.classList.remove('selected');
+                c.style.pointerEvents = 'auto';
+                c.style.opacity = '1';
+            });
+            
+            selectedCandidate = null;
+            document.getElementById('submitVoteBtn').disabled = true;
+            
+            clearMessages();
+        }
+
+        function updateStatistics() {
+            const totalVotes = votedStudents.length;
+            const totalEligible = validStudents.length;
+            const turnoutPercentage = totalEligible > 0 ? ((totalVotes / totalEligible) * 100).toFixed(1) : 0;
+            
+            document.getElementById('votesCast').textContent = totalVotes;
+            document.getElementById('turnout').textContent = turnoutPercentage + '%';
+            document.getElementById('remaining').textContent = totalEligible - totalVotes;
+        }
+
+        function resetSystem() {
+            if (!confirm('⚠️ Are you sure you want to reset the entire voting system? This will permanently delete all votes and cannot be undone!')) {
+                return;
+            }
+
+            // Reset all data
+            votedStudents = [];
+            voteResults = {
+                candidate1: 0,
+                candidate2: 0,
+                candidate3: 0
+            };
+            
+            // Update statistics
+            updateStatistics();
+            
+            // Complete logout
+            completeLogout();
+            
+            showMessage('🔄 Voting system has been reset successfully. All data cleared.', 'success');
+        }
+
+        function showSection(sectionId) {
+            // Hide all sections
+            const sections = ['loginSection', 'verificationSection', 'votingSection'];
+            sections.forEach(id => {
+                const section = document.getElementById(id);
+                if (section) {
+                    section.classList.add('hidden');
+                }
+            });
+            
+            // Show target section
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+        }
+
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            let icon = '';
+            
+            switch (type) {
+                case 'success':
+                    icon = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    icon = 'fas fa-exclamation-triangle';
+                    break;
+                case 'warning':
+                    icon = 'fas fa-exclamation-circle';
+                    break;
+                case 'info':
+                    icon = 'fas fa-info-circle';
+                    break;
+                default:
+                    icon = 'fas fa-info-circle';
+            }
+            
+            messageArea.innerHTML = `
+                <div class="message ${type}">
+                    <i class="${icon}"></i>
+                    ${message}
+                </div>
+            `;
+            
+            // Auto-hide non-critical messages after 8 seconds
+            if (type === 'info' || type === 'success') {
+                setTimeout(() => {
+                    if (messageArea.innerHTML.includes(message)) {
+                        messageArea.innerHTML = '';
+                    }
+                }, 8000);
+            }
+        }
+
+        function clearMessages() {
+            document.getElementById('messageArea').innerHTML = '';
+        }
+
+        // Utility function to parse JWT token
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (error) {
+                console.error('Error parsing JWT token:', error);
+                throw error;
+            }
+        }
+
+        // Initialize application
+        function initializeApp() {
+            // Initialize Google Sign-In
+            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                google.accounts.id.initialize({
+                    client_id: "154014439211-c8s3ce03tpju7k32qdnechim8bm0svf0.apps.googleusercontent.com",
+                    callback: handleCredentialResponse,
+                    auto_select: false,
+                    cancel_on_tap_outside: true
+                });
+            }
+            
+            // Update statistics on page load
+            updateStatistics();
+            
+            // Show initial login section
+            showSection('loginSection');
+            
+            console.log('ECE Voting System initialized successfully');
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add Enter key support for student ID input
+            const studentIdInput = document.getElementById('studentId');
+            if (studentIdInput) {
+                studentIdInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        verifyAndProceed();
+                    }
+                });
+                
+                // Auto-format student ID input
+                studentIdInput.addEventListener('input', function(e) {
+                    let value = e.target.value.toLowerCase();
+                    // Remove any non-alphanumeric characters except for the pattern
+                    value = value.replace(/[^a-z0-9]/g, '');
+                    
+                    // Ensure it starts with 'b' and limit length
+                    if (value && !value.startsWith('b')) {
+                        value = 'b' + value;
+                    }
+                    
+                    e.target.value = value.substring(0, 7);
+                });
+            }
+        });
+
+        // Initialize when Google API is loaded
+        window.onload = function() {
+            initializeApp();
+        };
+
+        // Prevent accidental page refresh during voting
+        window.addEventListener('beforeunload', function(e) {
+            if (currentUser && selectedCandidate && !votedStudents.includes(currentUser)) {
+                e.preventDefault();
+                e.returnValue = 'You have selected a candidate but haven\'t submitted your vote. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        });
+
+        // Handle Google API load errors
+        window.addEventListener('error', function(e) {
+            if (e.target.src && e.target.src.includes('accounts.google.com')) {
+                console.error('Failed to load Google Sign-In API');
+                showMessage('Failed to load Google Sign-In. Please check your internet connection and try again.', 'error');
+            }
+        });
+
+        // Add keyboard shortcuts (Admin features)
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+Shift+R: Reset system (Admin shortcut)
+            if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                e.preventDefault();
+                resetSystem();
+            }
+            
+            // Ctrl+Shift+S: Show statistics in console (Admin debug)
+            if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                console.log('=== ECE Voting System Statistics ===');
+                console.log('Total Eligible Voters:', validStudents.length);
+                console.log('Votes Cast:', votedStudents.length);
+                console.log('Voted Students:', votedStudents);
+                console.log('Vote Results:', voteResults);
+                console.log('Current User:', currentUser);
+                console.log('=====================================');
+            }
+        });
+
+        // Utility functions for better UX
+        function formatStudentId(id) {
+            return id.toUpperCase();
+        }
+
+        function getVotePercentage(candidateKey) {
+            const totalVotes = Object.values(voteResults).reduce((sum, votes) => sum + votes, 0);
+            if (totalVotes === 0) return '0%';
+            return ((voteResults[candidateKey] / totalVotes) * 100).toFixed(1) + '%';
+        }
+
+        // Animation helpers
+        function animateStatCard(element) {
+            element.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                element.style.transform = 'scale(1)';
+            }, 200);
+        }
+
+        // Update statistics with animation
+        function updateStatisticsAnimated() {
+            const cards = document.querySelectorAll('.stat-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    animateStatCard(card);
+                }, index * 100);
+            });
+            updateStatistics();
+        }
+
+        console.log('🗳️ ECE Voting System v2.0 - Loaded Successfully');
+        console.log('📊 Valid Students Range: b221301 - b221400 (100 students)');
+        console.log('🔐 Google OAuth Client ID: Configured');
+        console.log('✅ System Ready for Voting!');
+    </script>
+</body>
+</html>
