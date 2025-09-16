@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'fileconverter',
     'imageresizer',
     'videodownloader',
+    'pdftools',
 ]
 
 MIDDLEWARE = [
